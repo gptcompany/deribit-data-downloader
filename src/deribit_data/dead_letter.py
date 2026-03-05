@@ -153,7 +153,8 @@ class DeadLetterQueue:
         }
 
         for file_path in sorted(self.dlq_path.glob("*_dead_letters_*.jsonl")):
-            line_count = sum(1 for _ in open(file_path))
+            with open(file_path) as f:
+                line_count = sum(1 for _ in f)
             currency = file_path.stem.split("_")[0].upper()
 
             summary["total_files"] += 1

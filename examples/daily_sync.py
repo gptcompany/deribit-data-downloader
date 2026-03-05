@@ -21,8 +21,7 @@ Systemd timer example:
 
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
 from deribit_data.config import DeribitConfig
 from deribit_data.fetcher import DeribitFetcher
@@ -60,7 +59,7 @@ def sync_currency(config: DeribitConfig, currency: str) -> int:
         return 0
 
     start_date = last_ts + timedelta(seconds=1)
-    end_date = datetime.now(timezone.utc)
+    end_date = datetime.now(UTC)
 
     logger.info(f"Syncing {currency} from {start_date.isoformat()}")
 
@@ -87,7 +86,7 @@ def main() -> int:
     """Run daily sync for all currencies."""
     config = DeribitConfig.from_env()
 
-    logger.info(f"Starting daily sync at {datetime.now(timezone.utc).isoformat()}")
+    logger.info(f"Starting daily sync at {datetime.now(UTC).isoformat()}")
     logger.info(f"Catalog: {config.catalog_path}")
     logger.info(f"Currencies: {config.currencies}")
 

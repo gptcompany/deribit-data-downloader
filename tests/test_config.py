@@ -1,10 +1,9 @@
 """Tests for configuration module."""
-
-import os
 from datetime import date
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from deribit_data.config import DeribitConfig, ValidationConfig
 
@@ -49,7 +48,7 @@ class TestDeribitConfig:
     def test_frozen(self) -> None:
         """Test config is immutable."""
         config = DeribitConfig()
-        with pytest.raises(Exception):  # Pydantic raises ValidationError
+        with pytest.raises(ValidationError):  # Pydantic raises ValidationError
             config.http_timeout = 60.0  # type: ignore
 
     def test_validation_nested(self) -> None:

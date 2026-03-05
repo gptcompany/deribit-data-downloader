@@ -84,7 +84,7 @@ class TestDeadLetterQueue:
 
         assert len(stats) == 1
         # Key format is "CURRENCY:YYYY-MM-DD"
-        assert any("BTC" in k for k in stats.keys())
+        assert any("BTC" in k for k in stats)
 
     def test_get_summary(self, dlq: DeadLetterQueue) -> None:
         """Test getting summary."""
