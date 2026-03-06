@@ -8,15 +8,15 @@ Requires=docker.service
 Type=oneshot
 User=sam
 Group=sam
-WorkingDirectory=/media/sam/1TB/deribit-data-downloader
+EnvironmentFile=/etc/downloader-sync.env
 
 Environment=COMPOSE_PROJECT_NAME=deribit-sync
 Environment=QUESTDB_HOST=localhost
 Environment=QUESTDB_PORT=9009
 
 # Sync BTC then ETH sequentially
-ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh deribit-sync-btc /usr/bin/docker compose -f /media/sam/1TB/deribit-data-downloader/docker-compose.yml run --rm deribit-sync
-ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh deribit-sync-eth /usr/bin/docker compose -f /media/sam/1TB/deribit-data-downloader/docker-compose.yml run --rm deribit-sync-eth
+ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh deribit-sync-btc /usr/bin/docker compose --env-file /etc/downloader-sync.env --project-directory ${DERIBIT_REPO_ROOT} -f ${DERIBIT_REPO_ROOT}/docker-compose.yml run --rm deribit-sync
+ExecStart=/media/sam/1TB/monitoring-stack/scripts/cron-wrapper.sh deribit-sync-eth /usr/bin/docker compose --env-file /etc/downloader-sync.env --project-directory ${DERIBIT_REPO_ROOT} -f ${DERIBIT_REPO_ROOT}/docker-compose.yml run --rm deribit-sync-eth
 
 TimeoutStartSec=3600
 Restart=no

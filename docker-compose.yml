@@ -2,7 +2,7 @@ services:
   deribit-sync:
     build: .
     volumes:
-      - /media/sam/2TB-NVMe/data/deribit_options:/data/deribit_options
+      - ${DERIBIT_DATA_ROOT:-/media/sam/2TB-NVMe/data/deribit_options}:/data/deribit_options
     environment:
       - DERIBIT_CATALOG_PATH=/data/deribit_options
       - DERIBIT_COMPRESSION=zstd
@@ -12,7 +12,7 @@ services:
   deribit-sync-eth:
     build: .
     volumes:
-      - /media/sam/2TB-NVMe/data/deribit_options:/data/deribit_options
+      - ${DERIBIT_DATA_ROOT:-/media/sam/2TB-NVMe/data/deribit_options}:/data/deribit_options
     environment:
       - DERIBIT_CATALOG_PATH=/data/deribit_options
       - DERIBIT_COMPRESSION=zstd
@@ -24,7 +24,7 @@ services:
     build: .
     profiles: ["backfill"]
     volumes:
-      - /media/sam/2TB-NVMe/data/deribit_options:/data/deribit_options
+      - ${DERIBIT_DATA_ROOT:-/media/sam/2TB-NVMe/data/deribit_options}:/data/deribit_options
       - deribit-checkpoints:/checkpoints
     environment:
       - DERIBIT_CATALOG_PATH=/data/deribit_options
@@ -35,7 +35,7 @@ services:
     build: .
     profiles: ["backfill"]
     volumes:
-      - /media/sam/2TB-NVMe/data/deribit_options:/data/deribit_options
+      - ${DERIBIT_DATA_ROOT:-/media/sam/2TB-NVMe/data/deribit_options}:/data/deribit_options
       - deribit-checkpoints:/checkpoints
     environment:
       - DERIBIT_CATALOG_PATH=/data/deribit_options

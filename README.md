@@ -122,6 +122,18 @@ docker run -v /path/to/data:/data deribit-data-downloader \
     backfill --currency ETH --catalog /data/deribit
 ```
 
+### Systemd + Paths (Host Configuration)
+This host uses `/etc/downloader-sync.env` for path configuration:
+`DERIBIT_REPO_ROOT` points to the repo location and `DERIBIT_DATA_ROOT` points to the persisted catalog path.
+`docker-compose.yml` reads `DERIBIT_DATA_ROOT` for data persistence.
+
+### Notifications
+Healthchecks pings are emitted by `cron-wrapper.sh` (monitoring-stack).
+Discord delivery is configured on the Healthchecks server. To (re)configure the webhook on this host, run:
+```bash
+dotenvx run -f /media/sam/1TB/.env -- /media/sam/1TB/monitoring-stack/scripts/configure-healthchecks-discord.sh
+```
+
 ## Development
 
 ```bash
