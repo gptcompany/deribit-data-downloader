@@ -27,11 +27,13 @@ WORKDIR /app
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin/deribit-data /usr/local/bin/deribit-data
+COPY scripts /app/scripts
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && \
     mkdir -p /data /checkpoints && \
-    chown -R appuser:appuser /data /checkpoints
+    chmod +x /app/scripts/run-sync-with-notify.sh && \
+    chown -R appuser:appuser /data /checkpoints /app/scripts
 
 USER appuser
 

@@ -122,6 +122,12 @@ docker run -v /path/to/data:/data deribit-data-downloader \
     backfill --currency ETH --catalog /data/deribit
 ```
 
+### Docker-First Execution (CI)
+These services are intended to run **inside Docker** (CI actions launch Docker services, not systemd).
+For notifications, set `DISCORD_WEBHOOK_HISTORY` and the container will send the run summary.
+The compose services use `scripts/run-sync-with-notify.sh` so the summary sent to Discord matches the
+original CLI output.
+
 ### Systemd + Paths (Host Configuration)
 This host uses `/etc/downloader-sync.env` for path configuration:
 `DERIBIT_REPO_ROOT` points to the repo location and `DERIBIT_DATA_ROOT` points to the persisted catalog path.

@@ -7,7 +7,8 @@ services:
       - DERIBIT_CATALOG_PATH=/data/deribit_options
       - DERIBIT_COMPRESSION=zstd
       - TZ=Europe/Lisbon
-    command: sync --currency BTC
+    entrypoint: ["bash", "scripts/run-sync-with-notify.sh"]
+    command: ["BTC"]
 
   deribit-sync-eth:
     build: .
@@ -17,7 +18,8 @@ services:
       - DERIBIT_CATALOG_PATH=/data/deribit_options
       - DERIBIT_COMPRESSION=zstd
       - TZ=Europe/Lisbon
-    command: sync --currency ETH
+    entrypoint: ["bash", "scripts/run-sync-with-notify.sh"]
+    command: ["ETH"]
 
   # Keep backfill services for manual use
   backfill-btc:
