@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -82,7 +82,7 @@ class ParquetStorage:
         tmp_path = file_path.with_suffix(".parquet.tmp")
 
         # Write to temp file
-        write_kwargs: dict = {"compression": self.compression}
+        write_kwargs: dict[str, Any] = {"compression": self.compression}
         if self.compression == "zstd":
             write_kwargs["compression_level"] = self.compression_level
         pq.write_table(table, tmp_path, **write_kwargs)
@@ -310,10 +310,10 @@ class ParquetStorage:
         if table.num_rows == 0:
             return None
 
-        timestamps = table.column("timestamp").to_pylist()
+        timestamps: list[datetime] = table.column("timestamp").to_pylist()
         return max(timestamps)
 
-    def get_stats(self, currency: str) -> dict:
+    def get_stats(self, currency: str) -> dict[str, Any]:
         """Get statistics for a currency's data.
 
         Args:

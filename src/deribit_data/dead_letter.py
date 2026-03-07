@@ -10,6 +10,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from deribit_data.models import FailedTrade
 
@@ -139,28 +140,26 @@ class DeadLetterQueue:
 
         return failures
 
-    def get_summary(self) -> dict:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of all dead letter files.
 
         Returns:
             Dict with file counts, total failures, and breakdown by currency.
         """
-        summary = {
-            "total_files": 0,
-            "total_failures": 0,
-            "by_currency": {},
-            "files": [],
-        }
+        total_files = 0
+        total_failures = 0
+        by_currency: dict[str, int] = {}
+        files: list[dict[str, Any]] = []
 
         for file_path in sorted(self.dlq_path.glob("*_dead_letters_*.jsonl")):
             with open(file_path) as f:
                 line_count = sum(1 for _ in f)
             currency = file_path.stem.split("_")[0].upper()
 
-            summary["total_files"] += 1
-            summary["total_failures"] += line_count
-            summary["by_currency"][currency] = summary["by_currency"].get(currency, 0) + line_count
-            summary["files"].append(
+            total_files += 1
+            total_failures += line_count
+            by_currency[currency] = by_currency.get(currency, 0) + line_count
+            files.append(
                 {
                     "path": str(file_path),
                     "currency": currency,
@@ -168,4 +167,9 @@ class DeadLetterQueue:
                 }
             )
 
-        return summary
+        return {
+            "total_files": total_files,
+            "total_failures": total_failures,
+            "by_currency": by_currency,
+            "files": files,
+        }

@@ -11,7 +11,7 @@ import re
 import time
 from collections.abc import Generator
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -76,7 +76,7 @@ class DeribitFetcher:
     def __enter__(self) -> DeribitFetcher:
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
     def _rate_limit(self) -> None:
@@ -87,7 +87,7 @@ class DeribitFetcher:
                 time.sleep(self.config.rate_limit_delay - elapsed)
         self._last_request_time = time.time()
 
-    def _request_with_backoff(self, url: str, params: dict) -> dict:
+    def _request_with_backoff(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
         """Make API request with exponential backoff.
 
         Args:
@@ -106,7 +106,8 @@ class DeribitFetcher:
             try:
                 response = self._client.get(url, params=params)
                 response.raise_for_status()
-                return response.json()
+                result: dict[str, Any] = response.json()
+                return result
 
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429:  # Rate limited
@@ -139,7 +140,7 @@ class DeribitFetcher:
 
         raise RuntimeError(f"Max retries ({self.config.max_retries}) exceeded for {url}")
 
-    def _parse_instrument(self, instrument_name: str) -> dict | None:
+    def _parse_instrument(self, instrument_name: str) -> dict[str, Any] | None:
         """Parse instrument name to extract details."""
         match = self.INSTRUMENT_PATTERN.match(instrument_name)
         if not match:
@@ -161,7 +162,7 @@ class DeribitFetcher:
             "option_type": OptionType.CALL if groups["type"] == "C" else OptionType.PUT,
         }
 
-    def _parse_trade(self, trade_data: dict) -> tuple[OptionTrade | None, str | None]:
+    def _parse_trade(self, trade_data: dict[str, Any]) -> tuple[OptionTrade | None, str | None]:
         """Parse raw trade data into OptionTrade.
 
         Returns:
@@ -231,7 +232,7 @@ class DeribitFetcher:
             start_ts = resume_from_ms + 1
             logger.info(f"Resuming from timestamp {resume_from_ms}")
 
-        params: dict = {
+        params: dict[str, Any] = {
             "currency": currency,
             "kind": "option",
             "count": self.config.batch_size,

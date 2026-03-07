@@ -261,45 +261,47 @@ class AuditLog:
         events.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         return events[:limit]
 
-    def get_summary(self) -> dict:
+    def get_summary(self) -> dict[str, Any]:
         """Get audit log summary.
 
         Returns:
             Summary dict with counts and recent activity.
         """
-        summary = {
-            "total_files": 0,
-            "total_events": 0,
-            "by_event_type": {},
-            "by_currency": {},
-            "recent_errors": [],
-        }
+        total_files = 0
+        total_events = 0
+        by_event_type: dict[str, int] = {}
+        by_currency: dict[str, int] = {}
+        recent_errors: list[dict[str, Any]] = []
 
         for file_path in self.audit_path.glob("audit_*.jsonl"):
-            summary["total_files"] += 1
+            total_files += 1
 
             with open(file_path) as f:
                 for line in f:
                     try:
                         event = json.loads(line.strip())
-                        summary["total_events"] += 1
+                        total_events += 1
 
                         # Count by type
                         etype = event.get("event_type", "unknown")
-                        summary["by_event_type"][etype] = summary["by_event_type"].get(etype, 0) + 1
+                        by_event_type[etype] = by_event_type.get(etype, 0) + 1
 
                         # Count by currency
                         currency = event.get("currency", "N/A")
                         if currency:
-                            summary["by_currency"][currency] = (
-                                summary["by_currency"].get(currency, 0) + 1
-                            )
+                            by_currency[currency] = by_currency.get(currency, 0) + 1
 
                         # Track recent errors
-                        if "error" in etype.lower() and len(summary["recent_errors"]) < 10:
-                            summary["recent_errors"].append(event)
+                        if "error" in etype.lower() and len(recent_errors) < 10:
+                            recent_errors.append(event)
 
                     except json.JSONDecodeError:
                         continue
 
-        return summary
+        return {
+            "total_files": total_files,
+            "total_events": total_events,
+            "by_event_type": by_event_type,
+            "by_currency": by_currency,
+            "recent_errors": recent_errors,
+        }

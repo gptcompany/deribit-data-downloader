@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class OptionType(StrEnum):
@@ -91,7 +91,7 @@ class DVOLCandle(BaseModel):
 
     @field_validator("high")
     @classmethod
-    def high_gte_low(cls, v: float, info) -> float:
+    def high_gte_low(cls, v: float, info: ValidationInfo) -> float:
         """Validate high >= low."""
         if "low" in info.data and v < info.data["low"]:
             raise ValueError(f"high ({v}) must be >= low ({info.data['low']})")

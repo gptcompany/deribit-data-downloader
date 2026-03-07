@@ -105,7 +105,7 @@ class DataReconciler:
     def __enter__(self) -> DataReconciler:
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
     def _get_api_trade_count(
@@ -124,7 +124,7 @@ class DataReconciler:
         start_ts = int(start_date.timestamp() * 1000)
         end_ts = int(end_date.timestamp() * 1000)
 
-        params = {
+        params: dict[str, str | int] = {
             "currency": currency,
             "kind": "option",
             "count": 10000,  # Max batch
@@ -173,7 +173,7 @@ class DataReconciler:
 
         try:
             metadata = pq.read_metadata(file_path)
-            return metadata.num_rows
+            return int(metadata.num_rows)
         except Exception as e:
             logger.warning(f"Error reading {file_path}: {e}")
             return 0

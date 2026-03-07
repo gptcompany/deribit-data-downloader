@@ -66,6 +66,11 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
+disallow_any_generics = false
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

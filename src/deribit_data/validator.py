@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pyarrow.parquet as pq
 
@@ -38,7 +38,7 @@ class ValidationIssue:
     category: str
     message: str
     file_path: str | None = None
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass
@@ -47,7 +47,7 @@ class ValidationResult:
 
     passed: bool
     issues: list[ValidationIssue]
-    stats: dict
+    stats: dict[str, Any]
 
     @property
     def critical_count(self) -> int:
@@ -96,7 +96,7 @@ class DataValidator:
         """
         trades_dir = catalog_path / currency / "trades"
         issues: list[ValidationIssue] = []
-        stats: dict = {
+        stats: dict[str, Any] = {
             "total_rows": 0,
             "total_files": 0,
             "date_range": None,
@@ -211,7 +211,7 @@ class DataValidator:
     def _validate_file(
         self,
         file_path: Path,
-        table,
+        table: Any,
         all_trade_ids: set[str],
     ) -> list[ValidationIssue]:
         """Validate a single parquet file."""
