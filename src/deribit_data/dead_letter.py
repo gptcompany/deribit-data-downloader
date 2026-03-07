@@ -160,10 +160,12 @@ class DeadLetterQueue:
             summary["total_files"] += 1
             summary["total_failures"] += line_count
             summary["by_currency"][currency] = summary["by_currency"].get(currency, 0) + line_count
-            summary["files"].append({
-                "path": str(file_path),
-                "currency": currency,
-                "failures": line_count,
-            })
+            summary["files"].append(
+                {
+                    "path": str(file_path),
+                    "currency": currency,
+                    "failures": line_count,
+                }
+            )
 
         return summary

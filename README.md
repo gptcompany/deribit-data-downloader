@@ -164,12 +164,38 @@ uv run ruff format .
 
 ## CI/CD
 
-This repository uses **GitHub Actions** for continuous integration.
+This repository uses **GitHub Actions** for continuous integration and automated deployment.
 
+### Testing
 - **Triggers**: Workflows run on every push and pull request to `main` and `master`.
-- **Testing**: Automated tests are executed on both Linux and macOS.
-- **Coverage**: Coverage reports are uploaded to **Codecov** using secure **OIDC** authentication.
-- **Docker**: Docker builds are automatically verified during CI.
+- **Testing**: Automated tests on Linux and macOS.
+- **Coverage**: Reports uploaded to Codecov (OIDC auth).
+- **Docker**: Docker builds verified during CI.
+
+### Auto-Deploy Pipeline
+On push to `master` (when `Dockerfile`, `docker-compose.yml`, `pyproject.toml`, `uv.lock`, `src/**`, `scripts/**` change):
+
+1. **Trigger**: `trigger-progressive-deploy.yml` dispatches `deribit-downloader-build` to `progressive-deploy`
+2. **Build**: Progressive-deploy builds Docker image and pushes to `ghcr.io/gptcompany/deribit-downloader`
+3. **GitOps**: Image tag updated in `gitops/apps/deribit-downloader/base/kustomization.yaml`
+4. **Promotion**: Kargo promotes through dev → staging → prod
+
+**Required secret**: `PROGRESSIVE_DEPLOY_PAT` (GitHub classic PAT with `repo` scope)
+
+### Local Execution
+The service runs nightly via systemd timer (`deribit-sync-docker.timer` at 06:00), syncing BTC then ETH sequentially:
+```bash
+docker compose run --rm deribit-sync      # BTC
+docker compose run --rm deribit-sync-eth  # ETH
+```
+
+The systemd service uses `dotenvx` to load secrets from `/media/sam/1TB/.env` (SSOT) and `cron-wrapper.sh` from `monitoring-stack` for notifications. Runtime env vars are sourced from `/etc/downloader-sync.env` (contains `DERIBIT_REPO_ROOT`).
+
+Additional compose profiles are available for manual backfill:
+```bash
+docker compose --profile backfill run --rm backfill-btc   # Full BTC backfill with resume
+docker compose --profile backfill run --rm backfill-eth   # Full ETH backfill with resume
+```
 
 ## License
 

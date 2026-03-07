@@ -166,12 +166,7 @@ class DataReconciler:
 
     def _get_local_trade_count(self, currency: str, date: datetime) -> int:
         """Get trade count from local parquet file."""
-        file_path = (
-            self.catalog_path
-            / currency
-            / "trades"
-            / f"{date.strftime('%Y-%m-%d')}.parquet"
-        )
+        file_path = self.catalog_path / currency / "trades" / f"{date.strftime('%Y-%m-%d')}.parquet"
 
         if not file_path.exists():
             return 0

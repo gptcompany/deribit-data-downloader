@@ -303,9 +303,7 @@ def sync(ctx: click.Context, currency: str, catalog: Path | None) -> None:
     # Report DLQ stats
     dlq_failures = dlq.get_total_failures(currency)
     if dlq_failures > 0:
-        console.print(
-            f"[yellow]Warning: {dlq_failures:,} trades failed to parse[/yellow]"
-        )
+        console.print(f"[yellow]Warning: {dlq_failures:,} trades failed to parse[/yellow]")
 
 
 @main.command()
@@ -497,8 +495,13 @@ def reconcile(
     table.add_column("Value")
     table.add_row("Days checked", str(report.total_days))
     table.add_row("Matched days", f"[green]{report.matched_days}[/green]")
-    table.add_row("Incomplete days", f"[yellow]{report.incomplete_days}[/yellow]" if report.incomplete_days else "0")
-    table.add_row("Missing days", f"[red]{report.missing_days}[/red]" if report.missing_days else "0")
+    table.add_row(
+        "Incomplete days",
+        f"[yellow]{report.incomplete_days}[/yellow]" if report.incomplete_days else "0",
+    )
+    table.add_row(
+        "Missing days", f"[red]{report.missing_days}[/red]" if report.missing_days else "0"
+    )
     table.add_row("Local trades", f"{report.total_local_trades:,}")
     table.add_row("API trades", f"{report.total_api_trades:,}")
     table.add_row("Completeness", f"{report.completeness_pct:.1f}%")

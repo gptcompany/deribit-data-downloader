@@ -360,8 +360,7 @@ class DeribitFetcher:
             page += 1
 
             logger.info(
-                f"DVOL page {page}: fetched {len(batch_candles)} candles, "
-                f"total {len(all_candles)}"
+                f"DVOL page {page}: fetched {len(batch_candles)} candles, total {len(all_candles)}"
             )
 
             # Use continuation token as new end_timestamp for backward pagination

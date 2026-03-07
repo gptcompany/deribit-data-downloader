@@ -153,9 +153,7 @@ class AuditLog:
             )
         )
 
-    def log_sync_complete(
-        self, currency: str, trades_count: int, duration_seconds: float
-    ) -> None:
+    def log_sync_complete(self, currency: str, trades_count: int, duration_seconds: float) -> None:
         """Log sync completion."""
         self.log(
             AuditEvent(

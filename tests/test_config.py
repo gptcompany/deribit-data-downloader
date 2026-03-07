@@ -1,4 +1,5 @@
 """Tests for configuration module."""
+
 from datetime import date
 from pathlib import Path
 
@@ -15,7 +16,7 @@ class TestValidationConfig:
         """Test default values."""
         config = ValidationConfig()
         assert config.iv_min == 0.01
-    assert config.iv_max == 10.0
+        assert config.iv_max == 10.0
         assert config.gap_critical_days == 7
         assert config.duplicate_threshold == 5.0
 
