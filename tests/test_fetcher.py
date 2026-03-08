@@ -1,6 +1,6 @@
 """Tests for fetcher module."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -64,7 +64,7 @@ class TestDeribitFetcher:
         trade_data = {
             "trade_id": "12345",
             "instrument_name": "BTC-27DEC24-100000-C",
-            "timestamp": 1704067200000,  # 2024-01-01 00:00:00 UTC
+            "timestamp": 1704067200000,  # 2024-01-01 00:00:00 timezone.utc
             "price": 0.05,
             "iv": 65.0,  # 65%
             "amount": 1.0,
@@ -162,8 +162,8 @@ class TestDeribitFetcher:
             batches = list(
                 fetcher.fetch_trades_streaming(
                     currency="BTC",
-                    start_date=datetime(2024, 1, 1, tzinfo=UTC),
-                    end_date=datetime(2024, 1, 2, tzinfo=UTC),
+                    start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                    end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
                 )
             )
 
@@ -190,8 +190,8 @@ class TestDeribitFetcher:
         with DeribitFetcher(mock_config) as fetcher:
             candles = fetcher.fetch_dvol(
                 currency="BTC",
-                start_date=datetime(2024, 1, 1, tzinfo=UTC),
-                end_date=datetime(2024, 1, 2, tzinfo=UTC),
+                start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
             )
 
         assert len(candles) == 2

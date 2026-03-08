@@ -1,4 +1,4 @@
-# deribit-data-downloader
+# Deribit Options Data Downloader
 
 ![CI](https://github.com/gptcompany/deribit-data-downloader/actions/workflows/ci.yml/badge.svg?branch=master)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square&logo=python)
@@ -8,14 +8,40 @@
 
 High-performance Deribit options data downloader with crash recovery, streaming writes, and NautilusTrader compatibility.
 
-## Features
+## Key Features
 
-- **Streaming downloads** - No RAM accumulation, writes as it fetches
-- **Crash recovery** - Resume from checkpoint after interruption
-- **Atomic writes** - No data corruption on crash (tmp + rename pattern)
-- **DVOL index** - Download Deribit Volatility Index (DVOL) data
-- **Data validation** - Configurable quality checks
-- **SHA256 manifest** - Verify data integrity
+- **⚡ Streaming Downloads**: No RAM accumulation, writes as it fetches to minimize memory footprint
+- **🔄 Crash Recovery**: Intelligent resume from checkpoint after interruption
+- **🔐 Atomic Writes**: Pattern-based (tmp + rename) to prevent data corruption on crash
+- **📈 DVOL Index**: Specialized support for Deribit Volatility Index (DVOL) data
+- **✅ Data Validation**: Configurable quality checks and integrity verification
+- **📋 SHA256 Manifest**: Maintains a manifest for all downloaded files to ensure data integrity
+- **🛠️ Production Ready**: Extensive testing and error handling with crash-safe architecture
+
+## Project Structure
+
+```
+deribit-data-downloader/
+├── src/                              # Core source code
+│   └── deribit_data/                 # Main package implementation
+├── tests/                            # Comprehensive test suite
+│   ├── test_fetcher.py               # API interaction tests
+│   ├── test_storage.py               # Data persistence tests
+│   ├── test_checkpoint.py            # Resume capability tests
+│   └── test_manifest.py              # Integrity verification tests
+├── scripts/                          # Utility scripts
+│   └── run-sync-with-notify.sh       # Docker entrypoint with Discord notifications
+├── docs/                             # Documentation and guides
+│   └── DATA_DICTIONARY.md            # Data schema and field descriptions
+├── examples/                         # Usage examples
+│   └── daily_sync.py                 # Daily incremental sync example
+├── pyproject.toml                    # Project configuration (uv compatible)
+├── uv.lock                           # Locked dependencies
+├── Dockerfile                        # Container image for production sync
+├── docker-compose.yml                # Container runtime definition
+├── README.md                         # This file
+└── deploy/systemd/                   # systemd units for Docker runs
+```
 
 ## Installation
 
@@ -23,7 +49,7 @@ High-performance Deribit options data downloader with crash recovery, streaming 
 pip install deribit-data-downloader
 ```
 
-Or with uv:
+Or with `uv` (recommended):
 
 ```bash
 uv pip install deribit-data-downloader
@@ -111,27 +137,27 @@ catalog/
 | low | float64 | Low IV |
 | close | float64 | Closing IV |
 
-## Docker
+## Docker (Production)
 
 ```bash
-# Build
-docker build -t deribit-data-downloader .
+# Optional: customize runtime parameters
+cp .env.example .env
 
-# Run with volume mount
-docker run -v /path/to/data:/data deribit-data-downloader \
-    backfill --currency ETH --catalog /data/deribit
+# Build image
+docker compose build deribit-sync
+
+# Run one sync job (BTC)
+docker compose run --rm deribit-sync
 ```
+
+Data persistence is controlled by `DERIBIT_DATA_ROOT` (volume mount in `docker-compose.yml`).
+On this host, set `DERIBIT_REPO_ROOT` and `DERIBIT_DATA_ROOT` in `/etc/downloader-sync.env` and use the
+`deploy/systemd/deribit-sync-docker.service` unit, which reads those variables via `EnvironmentFile=`.
 
 ### Docker-First Execution (CI)
 These services are intended to run **inside Docker** (CI actions launch Docker services, not systemd).
-For notifications, set `DISCORD_WEBHOOK_HISTORY` and the container will send the run summary.
-The compose services use `scripts/run-sync-with-notify.sh` so the summary sent to Discord matches the
-original CLI output.
-
-### Systemd + Paths (Host Configuration)
-This host uses `/etc/downloader-sync.env` for path configuration:
-`DERIBIT_REPO_ROOT` points to the repo location and `DERIBIT_DATA_ROOT` points to the persisted catalog path.
-`docker-compose.yml` reads `DERIBIT_DATA_ROOT` for data persistence.
+The compose service runs `scripts/run-sync-with-notify.sh`, which captures the original run summary and
+sends it to Discord when `DISCORD_WEBHOOK_HISTORY` is set.
 
 ### Notifications
 Healthchecks pings are emitted by `cron-wrapper.sh` (monitoring-stack).
@@ -142,25 +168,6 @@ To (re)configure the Healthchecks Discord webhook on this host, run:
 ```bash
 dotenvx run -f /media/sam/1TB/.env -- /media/sam/1TB/monitoring-stack/scripts/configure-healthchecks-discord.sh
 ```
-
-## Development
-
-```bash
-# Clone
-git clone https://github.com/yourusername/deribit-data-downloader
-cd deribit-data-downloader
-
-# Install dev dependencies
-uv pip install -e ".[dev]"
-
-# Run tests
-uv run pytest tests/ -v --cov
-
-# Lint
-uv run ruff check .
-uv run ruff format .
-```
-
 
 ## CI/CD
 
@@ -195,6 +202,24 @@ Additional compose profiles are available for manual backfill:
 ```bash
 docker compose --profile backfill run --rm backfill-btc   # Full BTC backfill with resume
 docker compose --profile backfill run --rm backfill-eth   # Full ETH backfill with resume
+```
+
+## Development
+
+```bash
+# Clone
+git clone https://github.com/gptcompany/deribit-data-downloader
+cd deribit-data-downloader
+
+# Install dev dependencies
+uv pip install -e ".[dev]"
+
+# Run tests
+uv run pytest tests/ -v --cov
+
+# Lint
+uv run ruff check .
+uv run ruff format .
 ```
 
 ## License

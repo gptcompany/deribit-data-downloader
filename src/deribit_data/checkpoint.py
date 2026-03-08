@@ -7,12 +7,19 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from deribit_data.models import CheckpointState
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_isoformat(dt_str: str) -> datetime:
+    """Parse ISO format string with 'Z' suffix support for Python < 3.11."""
+    if dt_str.endswith("Z"):
+        dt_str = dt_str.replace("Z", "+00:00")
+    return datetime.fromisoformat(dt_str)
 
 
 class CheckpointManager:
@@ -90,9 +97,9 @@ class CheckpointManager:
 
             # Parse datetime strings
             if isinstance(data.get("started_at"), str):
-                data["started_at"] = datetime.fromisoformat(data["started_at"])
+                data["started_at"] = _parse_isoformat(data["started_at"])
             if isinstance(data.get("last_flush_at"), str):
-                data["last_flush_at"] = datetime.fromisoformat(data["last_flush_at"])
+                data["last_flush_at"] = _parse_isoformat(data["last_flush_at"])
 
             state = CheckpointState(**data)
             logger.info(
@@ -148,7 +155,7 @@ class CheckpointManager:
             last_timestamp_ms=0,
             last_page=0,
             trades_fetched=0,
-            started_at=datetime.now(UTC),
+            started_at=datetime.now(timezone.utc),
             last_flush_at=None,
             files_written=[],
         )

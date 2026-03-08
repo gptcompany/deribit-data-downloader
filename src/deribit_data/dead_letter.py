@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -113,7 +113,7 @@ class DeadLetterQueue:
             # Extract date from filename
             date_str = file_path.stem.split("_")[-1]
             try:
-                file_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
+                file_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             except ValueError:
                 continue
 

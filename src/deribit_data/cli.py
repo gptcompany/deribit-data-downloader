@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import sys
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import click
@@ -112,19 +112,19 @@ def backfill(
 
     # Date range
     start_date = (
-        start.replace(tzinfo=UTC)
+        start.replace(tzinfo=timezone.utc)
         if start
         else datetime(
             cfg.historical_start_date.year,
             cfg.historical_start_date.month,
             cfg.historical_start_date.day,
-            tzinfo=UTC,
+            tzinfo=timezone.utc,
         )
     )
     end_date = (
-        end.replace(tzinfo=UTC)
+        end.replace(tzinfo=timezone.utc)
         if end
-        else (datetime.now(UTC) - timedelta(days=1)).replace(hour=23, minute=59, second=59)
+        else (datetime.now(timezone.utc) - timedelta(days=1)).replace(hour=23, minute=59, second=59)
     )
 
     console.print(f"[bold]Backfill {currency}[/bold]")
@@ -279,7 +279,7 @@ def sync(ctx: click.Context, currency: str, catalog: Path | None) -> None:
         return
 
     start_date = last_ts + timedelta(seconds=1)
-    end_date = datetime.now(UTC)
+    end_date = datetime.now(timezone.utc)
 
     console.print(f"[bold]Sync {currency}[/bold]")
     console.print(f"  From: {start_date.isoformat()}")
@@ -343,8 +343,8 @@ def dvol(
         cfg = cfg.model_copy(update={"catalog_path": catalog})
 
     currency = currency.upper()
-    start_date = start.replace(tzinfo=UTC)
-    end_date = (end or datetime.now(UTC)).replace(tzinfo=UTC)
+    start_date = start.replace(tzinfo=timezone.utc)
+    end_date = (end or datetime.now(timezone.utc)).replace(tzinfo=timezone.utc)
 
     console.print(f"[bold]DVOL {currency}[/bold]")
     console.print(f"  Range: {start_date.date()} to {end_date.date()}")

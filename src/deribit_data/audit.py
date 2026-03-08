@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class AuditEventType(StrEnum):
+class AuditEventType(str, Enum):
     """Types of audit events."""
 
     BACKFILL_START = "backfill_start"
@@ -37,7 +37,7 @@ class AuditEventType(StrEnum):
 class AuditEvent(BaseModel):
     """Single audit event."""
 
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     event_type: AuditEventType
     currency: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
@@ -77,7 +77,7 @@ class AuditLog:
 
     def _get_current_file(self) -> Path:
         """Get current audit log file (monthly rotation)."""
-        month_str = datetime.now(UTC).strftime("%Y-%m")
+        month_str = datetime.now(timezone.utc).strftime("%Y-%m")
         return self.audit_path / f"audit_{month_str}.jsonl"
 
     def log(self, event: AuditEvent) -> None:

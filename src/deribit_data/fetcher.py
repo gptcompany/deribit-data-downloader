@@ -10,7 +10,7 @@ import logging
 import re
 import time
 from collections.abc import Generator
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -148,10 +148,10 @@ class DeribitFetcher:
 
         groups = match.groupdict()
 
-        # Parse expiry: DDMMMYY -> datetime (08:00 UTC)
+        # Parse expiry: DDMMMYY -> datetime (08:00 timezone.utc)
         try:
             expiry = datetime.strptime(groups["expiry"], "%d%b%y")
-            expiry = expiry.replace(hour=8, minute=0, second=0, tzinfo=UTC)
+            expiry = expiry.replace(hour=8, minute=0, second=0, tzinfo=timezone.utc)
         except ValueError:
             return None
 
@@ -183,7 +183,7 @@ class DeribitFetcher:
             trade = OptionTrade(
                 trade_id=trade_id,
                 instrument_id=instrument_name,
-                timestamp=datetime.fromtimestamp(trade_data["timestamp"] / 1000, tz=UTC),
+                timestamp=datetime.fromtimestamp(trade_data["timestamp"] / 1000, tz=timezone.utc),
                 price=float(trade_data["price"]),
                 iv=iv_decimal,
                 amount=float(trade_data["amount"]),
@@ -214,8 +214,8 @@ class DeribitFetcher:
 
         Args:
             currency: Currency (BTC, ETH).
-            start_date: Start date (UTC).
-            end_date: End date (UTC).
+            start_date: Start date (timezone.utc).
+            end_date: End date (timezone.utc).
             resume_from_ms: Resume from this timestamp (milliseconds).
             dead_letter_queue: Optional DLQ for failed trade parsing.
 
@@ -306,8 +306,8 @@ class DeribitFetcher:
 
         Args:
             currency: Currency (BTC, ETH).
-            start_date: Start date (UTC).
-            end_date: End date (UTC).
+            start_date: Start date (timezone.utc).
+            end_date: End date (timezone.utc).
             resolution: Candle resolution in seconds (default: 1 hour).
 
         Returns:
@@ -344,7 +344,7 @@ class DeribitFetcher:
                 # row format: [timestamp, open, high, low, close]
                 try:
                     candle = DVOLCandle(
-                        timestamp=datetime.fromtimestamp(row[0] / 1000, tz=UTC),
+                        timestamp=datetime.fromtimestamp(row[0] / 1000, tz=timezone.utc),
                         open=float(row[1]),
                         high=float(row[2]),
                         low=float(row[3]),

@@ -1,6 +1,6 @@
 """Tests for audit log."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -43,8 +43,8 @@ class TestAuditLog:
         """Test logging backfill start."""
         audit.log_backfill_start(
             currency="ETH",
-            start_date=datetime(2024, 1, 1, tzinfo=UTC),
-            end_date=datetime(2024, 12, 31, tzinfo=UTC),
+            start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            end_date=datetime(2024, 12, 31, tzinfo=timezone.utc),
         )
 
         events = audit.get_recent_events()
@@ -95,11 +95,11 @@ class TestAuditLog:
         """Test filtering recent events."""
         # Log multiple events
         audit.log_backfill_start(
-            "BTC", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 12, 31, tzinfo=UTC)
+            "BTC", datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 12, 31, tzinfo=timezone.utc)
         )
         audit.log_backfill_complete("BTC", 1000, 100, 60.0)
         audit.log_backfill_start(
-            "ETH", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 12, 31, tzinfo=UTC)
+            "ETH", datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 12, 31, tzinfo=timezone.utc)
         )
 
         # Filter by event type
@@ -114,7 +114,7 @@ class TestAuditLog:
         """Test getting summary."""
         # Log multiple events
         audit.log_backfill_start(
-            "BTC", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 12, 31, tzinfo=UTC)
+            "BTC", datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 12, 31, tzinfo=timezone.utc)
         )
         audit.log_backfill_complete("BTC", 1000, 100, 60.0)
         audit.log_backfill_error("ETH", "Test error")

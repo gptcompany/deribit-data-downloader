@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -95,7 +95,7 @@ class ManifestManager:
         tmp_path = self.manifest_path.with_suffix(".json.tmp")
 
         data = {
-            "generated_at": datetime.now(UTC).isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "catalog_path": str(self.catalog_path.absolute()),
             "files": {path: entry.to_dict() for path, entry in sorted(self._manifest.items())},
         }

@@ -6,7 +6,7 @@ Provides crash-safe writes using tmp + rename pattern.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -175,7 +175,7 @@ class ParquetStorage:
         # Write each partition
         written_files: list[Path] = []
         for date_str, date_trades in sorted(by_date.items()):
-            date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
+            date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             file_path = self._get_trade_file_path(currency, date)
 
             # If file exists, merge with existing data
@@ -255,7 +255,7 @@ class ParquetStorage:
             filtered_files = []
             for f in files:
                 try:
-                    file_date = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=UTC)
+                    file_date = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                     if start_date and file_date < start_date:
                         continue
                     if end_date and file_date > end_date:

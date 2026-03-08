@@ -1,6 +1,6 @@
 """Tests for checkpoint module."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from deribit_data.checkpoint import CheckpointManager
@@ -41,8 +41,8 @@ class TestCheckpointManager:
             last_timestamp_ms=1704067200000,
             last_page=100,
             trades_fetched=1000000,
-            started_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            last_flush_at=datetime(2024, 1, 1, 1, 0, 0, tzinfo=UTC),
+            started_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            last_flush_at=datetime(2024, 1, 1, 1, 0, 0, tzinfo=timezone.utc),
             files_written=["2024-01-01.parquet"],
         )
 
@@ -131,7 +131,7 @@ class TestCheckpointState:
             last_timestamp_ms=1000,
             last_page=10,
             trades_fetched=100,
-            started_at=datetime(2024, 1, 1, tzinfo=UTC),
+            started_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         )
 
         updated = state.update_progress(
@@ -151,7 +151,7 @@ class TestCheckpointState:
         """Test updating progress doesn't duplicate file names."""
         state = CheckpointState(
             currency="ETH",
-            started_at=datetime(2024, 1, 1, tzinfo=UTC),
+            started_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
             files_written=["file1.parquet"],
         )
 

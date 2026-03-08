@@ -5,20 +5,20 @@ Provides Pydantic models for option trades, DVOL candles, and checkpoint state.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime, timezone
+from enum import Enum
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
-class OptionType(StrEnum):
+class OptionType(str, Enum):
     """Option type enum."""
 
     CALL = "call"
     PUT = "put"
 
 
-class TradeDirection(StrEnum):
+class TradeDirection(str, Enum):
     """Trade direction enum."""
 
     BUY = "buy"
@@ -31,14 +31,14 @@ class OptionTrade(BaseModel):
     Attributes:
         trade_id: Unique trade identifier.
         instrument_id: Deribit instrument name (e.g., BTC-27DEC24-100000-C).
-        timestamp: Trade execution timestamp (UTC).
+        timestamp: Trade execution timestamp (timezone.utc).
         price: Trade price in USD.
         iv: Implied volatility at execution (0.0-10.0 range).
         amount: Trade size in contracts.
         direction: Trade direction (buy/sell).
         underlying: Underlying asset (BTC, ETH).
         strike: Strike price in USD.
-        expiry: Option expiration timestamp (UTC).
+        expiry: Option expiration timestamp (timezone.utc).
         option_type: Call or put.
         index_price: Underlying index price at trade time.
         mark_price: Mark price at trade time.
@@ -74,7 +74,7 @@ class DVOLCandle(BaseModel):
     """DVOL (Deribit Volatility Index) OHLC candle.
 
     Attributes:
-        timestamp: Candle open timestamp (UTC).
+        timestamp: Candle open timestamp (timezone.utc).
         open: Opening IV value.
         high: Highest IV value.
         low: Lowest IV value.
@@ -112,7 +112,7 @@ class FailedTrade(BaseModel):
 
     raw_data: dict
     error: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     currency: str
 
 
@@ -155,6 +155,6 @@ class CheckpointState(BaseModel):
             last_page=page,
             trades_fetched=self.trades_fetched + trades_count,
             started_at=self.started_at,
-            last_flush_at=datetime.now(UTC),
+            last_flush_at=datetime.now(timezone.utc),
             files_written=files,
         )

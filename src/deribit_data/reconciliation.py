@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -312,8 +312,8 @@ class DataReconciler:
         if not trades_dir.exists():
             return ReconciliationReport(
                 currency=currency,
-                start_date=datetime.now(UTC),
-                end_date=datetime.now(UTC),
+                start_date=datetime.now(timezone.utc),
+                end_date=datetime.now(timezone.utc),
                 total_days=0,
                 matched_days=0,
                 incomplete_days=0,
@@ -327,8 +327,8 @@ class DataReconciler:
         if not files:
             return ReconciliationReport(
                 currency=currency,
-                start_date=datetime.now(UTC),
-                end_date=datetime.now(UTC),
+                start_date=datetime.now(timezone.utc),
+                end_date=datetime.now(timezone.utc),
                 total_days=0,
                 matched_days=0,
                 incomplete_days=0,
@@ -338,8 +338,8 @@ class DataReconciler:
                 errors=["No parquet files found"],
             )
 
-        start_date = datetime.strptime(files[0].stem, "%Y-%m-%d").replace(tzinfo=UTC)
-        end_date = datetime.strptime(files[-1].stem, "%Y-%m-%d").replace(tzinfo=UTC)
+        start_date = datetime.strptime(files[0].stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        end_date = datetime.strptime(files[-1].stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
         return self.reconcile_range(
             currency=currency,
