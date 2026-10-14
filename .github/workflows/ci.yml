@@ -21,14 +21,13 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ vars.CI_RUNS_ON }}
     permissions:
       contents: read
       id-token: write
     strategy:
       fail-fast: false
       matrix:
-        runner: [[self-hosted, Linux, X64, muletto]]
         python-version: ["3.11"]
 
     steps:
@@ -83,7 +82,7 @@ jobs:
         continue-on-error: true
 
   docker:
-    runs-on: [self-hosted, Linux, X64, muletto]
+    runs-on: ${{ vars.CI_RUNS_ON }}
     needs: test
 
     steps:

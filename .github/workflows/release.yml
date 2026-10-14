@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: [self-hosted, Linux, X64, muletto]
+    runs-on: ${{ vars.CI_RUNS_ON }}
     permissions:
       contents: write
       id-token: write
@@ -32,13 +32,13 @@ jobs:
           skip-existing: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
 
   docker-publish:
-    runs-on: [self-hosted, Linux, X64, muletto]
+    runs-on: ${{ vars.CI_RUNS_ON }}
     needs: release
     permissions:
       packages: write
@@ -55,7 +55,7 @@ jobs:
 
       - name: Extract version
         id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v5
