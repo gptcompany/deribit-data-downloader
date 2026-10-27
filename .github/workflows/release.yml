@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: ${{ vars.CI_RUNS_ON }}
+    runs-on: [self-hosted, gbg-ci]
     permissions:
       contents: write
       id-token: write
