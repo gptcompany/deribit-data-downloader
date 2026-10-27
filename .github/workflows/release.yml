@@ -38,7 +38,7 @@ jobs:
           generate_release_notes: true
 
   docker-publish:
-    runs-on: ${{ vars.CI_RUNS_ON }}
+    runs-on: [self-hosted, gbg-ci]
     needs: release
     permissions:
       packages: write

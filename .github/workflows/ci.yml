@@ -82,7 +82,7 @@ jobs:
         continue-on-error: true
 
   docker:
-    runs-on: ${{ vars.CI_RUNS_ON }}
+    runs-on: [self-hosted, gbg-ci]
     needs: test
 
     steps:
