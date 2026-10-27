@@ -2,19 +2,36 @@
 """Check workflow runner assignments; requires PyYAML and authenticated gh."""
 
 import functools
-import shlex
 import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import quote
 
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, TypeAdapter
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERIC = "${{ vars.CI_RUNS_ON }}"
 # F-488: no self-hosted runner can run Docker for PR jobs (gbg-ci also matches sg-ci, which has none), so Docker
-# jobs declare a hosted fallback; the form is reserved for jobs that use Docker.
+# jobs declare a hosted fallback. The form is admitted only for the jobs in DOCKER_JOBS_FILE: recognizing Docker
+# from step text is a blocklist that any new spelling bypasses.
 DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["ubuntu-latest"]\') }}'
+DOCKER_JOBS_FILE = ROOT / ".github/docker-jobs.json"
+
+
+class DockerJob(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    workflow: StrictStr = Field(min_length=1)
+    job: StrictStr = Field(min_length=1)
+
+
+def docker_jobs(path=DOCKER_JOBS_FILE):
+    """Load the versioned allowlist of jobs that may use the Docker runner form."""
+    entries = TypeAdapter(list[DockerJob]).validate_json(path.read_bytes())
+    keys = {(entry.workflow, entry.job) for entry in entries}
+    if len(keys) != len(entries):
+        raise ValueError(f"{path.name}: duplicate entries")
+    return keys
 
 
 @functools.lru_cache(maxsize=None)
@@ -77,22 +94,13 @@ def check_steps(steps, origin=None):
             actions.append((uses, kind))
             if kind == "docker" or kind.startswith("composite (Docker:") or uses.startswith("docker/"):
                 reasons.append(f"action: {uses} ({kind})")
-        else:
-            run = step["run"]
-            if not isinstance(run, str):
-                raise ValueError("run must be a string")
-            try:
-                lexer = shlex.shlex(run, posix=True, punctuation_chars=True)
-                lexer.whitespace_split = True
-                tokens = list(lexer)
-            except ValueError as error:
-                raise ValueError(f"cannot parse run: {error}") from error
-            if any(token.rsplit("/", 1)[-1] == "docker" for token in tokens):
-                reasons.append("run: docker")
+        elif not isinstance(step["run"], str):
+            raise ValueError("run must be a string")
     return reasons, actions
 
 
-def check_job(job):
+def check_job(job, listed=False):
+    """Structural Docker use (reasons) only flags an unlisted job; it never admits the Docker form."""
     if not isinstance(job, dict) or "runs-on" not in job:
         raise ValueError("job must have a runs-on selector")
     runner = job["runs-on"]
@@ -105,15 +113,19 @@ def check_job(job):
             if not isinstance(job[field], (str, dict)) or not job[field]:
                 raise ValueError(f"invalid {field}")
             reasons.insert(0, field)
-    if reasons and not docker_runner:
-        raise ValueError(f"Docker job requires CI_DOCKER_RUNS_ON: {', '.join(reasons)}")
-    if docker_runner and not reasons:
-        raise ValueError("CI_DOCKER_RUNS_ON is reserved for jobs that use Docker")
+    if docker_runner and not listed:
+        raise ValueError(f"Docker runner form outside {DOCKER_JOBS_FILE.name}")
+    if listed and not docker_runner:
+        raise ValueError(f"listed in {DOCKER_JOBS_FILE.name} without the Docker runner form")
+    if reasons and not listed:
+        raise ValueError(f"Docker job not listed in {DOCKER_JOBS_FILE.name}: {', '.join(reasons)}")
     return reasons, actions
 
 
 def main():
     failed = False
+    allowed = docker_jobs()
+    seen = set()
     paths = sorted((ROOT / ".github/workflows").glob("*.y*ml"))
     if not paths:
         raise ValueError("no workflows found")
@@ -122,18 +134,22 @@ def main():
         if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
             raise ValueError(f"invalid workflow: {path}")
         for name, job in workflow["jobs"].items():
+            seen.add((path.name, name))
             try:
-                reasons, actions = check_job(job)
+                reasons, actions = check_job(job, (path.name, name) in allowed)
                 print(f"{path.name}:{name} runs-on={job['runs-on']} docker={bool(reasons)} reasons={reasons} actions={actions}")
             except (ValueError, yaml.YAMLError) as error:
                 print(f"{path.name}:{name} runs-on={job.get('runs-on')} ERROR: {error}")
                 failed = True
+    for workflow_name, job_name in sorted(allowed - seen):
+        print(f"{DOCKER_JOBS_FILE.name}: {workflow_name}:{job_name} ERROR: listed job does not exist")
+        failed = True
     return int(failed)
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (ValueError, yaml.YAMLError) as error:
+    except (OSError, ValueError, yaml.YAMLError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         sys.exit(1)
