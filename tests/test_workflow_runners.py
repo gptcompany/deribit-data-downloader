@@ -179,3 +179,38 @@ def test_invalid_runner_policy_fails(tmp_path, text):
     path.write_text(text)
     with pytest.raises(ValueError):
         checker.visibility(path)
+
+
+@pytest.mark.parametrize(
+    ("job", "expected"),
+    [
+        ("    uses: ./.github/workflows/reusable.yml\n", 0),
+        # Review byb2-r2: a job-level reusable workflow call has no runs-on.
+        ("    uses: ./.github/workflows/missing.yml\n", 1),
+        ("    uses: gptcompany/.github/.github/workflows/_reusable-ai-review.yml@main\n", 1),
+        ("    uses: ./other/reusable.yml\n", 1),
+        ("    uses: ./.github/workflows/reusable.yml\n    runs-on: ubuntu-latest\n", 1),
+        ("    name: empty\n", 1),
+        ("    runs-on: ubuntu-latest\n    run-on: self-hosted\n", 1),
+    ],
+)
+def test_public_reusable_workflows_must_be_local(tmp_path, monkeypatch, job, expected):
+    public_repo(tmp_path, monkeypatch, "ubuntu-latest")
+    workflows = tmp_path / ".github/workflows"
+    (workflows / "reusable.yml").write_text(
+        "on: workflow_call\njobs:\n  inner:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
+    )
+    (workflows / "caller.yml").write_text(f"jobs:\n  call:\n{job}")
+    assert checker.main() == expected
+
+
+def test_public_local_reusable_workflow_is_analyzed(tmp_path, monkeypatch):
+    public_repo(tmp_path, monkeypatch, "ubuntu-latest")
+    workflows = tmp_path / ".github/workflows"
+    (workflows / "reusable.yml").write_text(
+        "on: workflow_call\njobs:\n  inner:\n    runs-on: [self-hosted]\n"
+    )
+    (workflows / "caller.yml").write_text(
+        "jobs:\n  call:\n    uses: ./.github/workflows/reusable.yml\n"
+    )
+    assert checker.main() == 1

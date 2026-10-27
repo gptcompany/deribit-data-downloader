@@ -23,6 +23,13 @@ DOCKER_JOBS_FILE = ROOT / ".github/docker-jobs.json"
 # minutes instead. The visibility is declared in a versioned file, not read at runtime.
 POLICY_NAME = ".github/runner-policy.json"
 PUBLIC_RUNNER = "ubuntu-latest"
+# Job-level keys from the GitHub Actions workflow syntax; anything else fails closed.
+JOB_KEYS = {
+    "name", "permissions", "needs", "if", "runs-on", "snapshot", "environment", "concurrency", "outputs", "env",
+    "defaults", "steps", "timeout-minutes", "strategy", "continue-on-error", "container", "services", "uses", "with",
+    "secrets",
+}
+LOCAL_PREFIX = "./.github/workflows/"
 
 
 class RunnerPolicy(BaseModel):
@@ -137,21 +144,42 @@ def check_job(job, listed=False):
     return reasons, actions
 
 
+def check_public_job(job, local_workflows):
+    """A reusable workflow is admitted only as a local file that this check also analyzes (F-492: an external one,
+    gptcompany/.github included, can route a public repository job to a self-hosted runner)."""
+    if not isinstance(job, dict):
+        raise ValueError("job must be a mapping")
+    unknown = set(job) - JOB_KEYS
+    if unknown:
+        raise ValueError(f"unknown job keys: {sorted(unknown)}")
+    if "uses" in job:
+        uses = job["uses"]
+        if "runs-on" in job:
+            raise ValueError("a reusable workflow call cannot have runs-on")
+        if not isinstance(uses, str) or not uses.startswith(LOCAL_PREFIX) or uses[len(LOCAL_PREFIX):] not in local_workflows:
+            raise ValueError(f"reusable workflow must be a local analyzed file {LOCAL_PREFIX}<file>, found {uses!r}")
+        return f"uses={uses}"
+    if job.get("runs-on") != PUBLIC_RUNNER:
+        raise ValueError(f"public repository requires runs-on: {PUBLIC_RUNNER}")
+    return f"runs-on={PUBLIC_RUNNER}"
+
+
 def check_public(paths):
     """Public repository: every job runs on the literal hosted runner, and no Docker allowlist exists."""
     failed = DOCKER_JOBS_FILE.exists()
     if failed:
         print(f"{DOCKER_JOBS_FILE.name} ERROR: the Docker runner form is not allowed in a public repository")
+    local_workflows = {path.name for path in paths}
     for path in paths:
         workflow = yaml.safe_load(path.read_text())
         if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
             raise ValueError(f"invalid workflow: {path}")
         for name, job in workflow["jobs"].items():
-            runner = job.get("runs-on") if isinstance(job, dict) else None
-            if runner == PUBLIC_RUNNER:
-                print(f"{path.name}:{name} runs-on={runner} ok (public)")
-            else:
-                print(f"{path.name}:{name} runs-on={runner} ERROR: public repository requires runs-on: {PUBLIC_RUNNER}")
+            try:
+                print(f"{path.name}:{name} {check_public_job(job, local_workflows)} ok (public)")
+            except ValueError as error:
+                runner = job.get("runs-on") if isinstance(job, dict) else None
+                print(f"{path.name}:{name} runs-on={runner} ERROR: {error}")
                 failed = True
     return int(failed)
 
