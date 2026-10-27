@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from deribit_data.models import CheckpointState
@@ -155,7 +155,7 @@ class CheckpointManager:
             last_timestamp_ms=0,
             last_page=0,
             trades_fetched=0,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             last_flush_at=None,
             files_written=[],
         )

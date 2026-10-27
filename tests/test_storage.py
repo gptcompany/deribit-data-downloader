@@ -1,6 +1,6 @@
 """Tests for storage module."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -41,14 +41,14 @@ class TestParquetStorage:
         trade = OptionTrade(
             trade_id="unique_id",
             instrument_id="BTC-27DEC24-100000-C",
-            timestamp=datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC),
             price=0.05,
             iv=0.65,
             amount=1.0,
             direction=TradeDirection.BUY,
             underlying="BTC",
             strike=100000.0,
-            expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=timezone.utc),
+            expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=UTC),
             option_type=OptionType.CALL,
         )
 
@@ -84,8 +84,8 @@ class TestParquetStorage:
         storage.save_trades(sample_trades, "ETH")
 
         # Load only first day
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 1, 23, 59, 59, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 1, 23, 59, 59, tzinfo=UTC)
 
         table = storage.load_trades("ETH", start_date=start, end_date=end)
 

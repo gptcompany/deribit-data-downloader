@@ -1,6 +1,6 @@
 """Pytest fixtures for deribit-data-downloader tests."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -53,14 +53,14 @@ def sample_trade() -> OptionTrade:
     return OptionTrade(
         trade_id="12345",
         instrument_id="BTC-27DEC24-100000-C",
-        timestamp=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC),
         price=0.0500,
         iv=0.65,
         amount=1.0,
         direction=TradeDirection.BUY,
         underlying="BTC",
         strike=100000.0,
-        expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=timezone.utc),
+        expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=UTC),
         option_type=OptionType.CALL,
         index_price=45000.0,
         mark_price=0.0510,
@@ -70,7 +70,7 @@ def sample_trade() -> OptionTrade:
 @pytest.fixture
 def sample_trades() -> list[OptionTrade]:
     """Create list of sample trades across multiple days."""
-    base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     trades = []
     for i in range(10):
         # Spread trades across 3 days
@@ -91,7 +91,7 @@ def sample_trades() -> list[OptionTrade]:
                 direction=TradeDirection.SELL if i % 2 else TradeDirection.BUY,
                 underlying="ETH",
                 strike=5000.0,
-                expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=timezone.utc),
+                expiry=datetime(2024, 12, 27, 8, 0, 0, tzinfo=UTC),
                 option_type=OptionType.PUT,
             )
         )
@@ -101,7 +101,7 @@ def sample_trades() -> list[OptionTrade]:
 @pytest.fixture
 def sample_dvol_candles() -> list[DVOLCandle]:
     """Create sample DVOL candles."""
-    base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     return [
         DVOLCandle(
             timestamp=base_time.replace(hour=i),
