@@ -23,9 +23,32 @@ def test_hosted_fallback_fails():
         checker.check_job(job)
 
 
+DOCKER_FORM = """${{ fromJSON(vars.CI_DOCKER_RUNS_ON || '["ubuntu-latest"]') }}"""
+
+
 def test_docker_runner_passes():
-    job = {"runs-on": ["self-hosted", "gbg-ci"], "steps": [{"run": "docker build ."}]}
+    job = {"runs-on": DOCKER_FORM, "steps": [{"run": "docker build ."}]}
     assert checker.check_job(job)[0] == ["run: docker"]
+
+
+def test_literal_gbg_ci_docker_runner_fails():
+    # F-488: gbg-ci also matches sg-ci, which has no Docker.
+    job = {"runs-on": ["self-hosted", "gbg-ci"], "steps": [{"run": "docker build ."}]}
+    with pytest.raises(ValueError, match="runner"):
+        checker.check_job(job)
+
+
+def test_docker_form_without_docker_fails():
+    job = {"runs-on": DOCKER_FORM, "steps": [{"run": "uv run pytest"}]}
+    with pytest.raises(ValueError, match="reserved"):
+        checker.check_job(job)
+
+
+def test_docker_namespace_action_counts_as_docker(monkeypatch):
+    monkeypatch.setattr(checker, "action_type", lambda uses: "node")
+    job = {"runs-on": "${{ vars.CI_RUNS_ON }}", "steps": [{"uses": "docker/build-push-action@v5"}]}
+    with pytest.raises(ValueError, match="Docker job"):
+        checker.check_job(job)
 
 
 def test_unresolved_local_composite_action_is_docker(monkeypatch):

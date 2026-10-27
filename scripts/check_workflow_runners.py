@@ -12,7 +12,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERIC = "${{ vars.CI_RUNS_ON }}"
-DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["self-hosted","gbg-ci"]\') }}'
+# F-488: no self-hosted runner can run Docker for PR jobs (gbg-ci also matches sg-ci, which has none), so Docker
+# jobs declare a hosted fallback; the form is reserved for jobs that use Docker.
+DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["ubuntu-latest"]\') }}'
 
 
 @functools.lru_cache(maxsize=None)
@@ -73,7 +75,7 @@ def check_steps(steps, origin=None):
                     raise
                 kind = "docker"  # An unresolved local composite action may be generated.
             actions.append((uses, kind))
-            if kind == "docker" or kind.startswith("composite (Docker:"):
+            if kind == "docker" or kind.startswith("composite (Docker:") or uses.startswith("docker/"):
                 reasons.append(f"action: {uses} ({kind})")
         else:
             run = step["run"]
@@ -94,7 +96,7 @@ def check_job(job):
     if not isinstance(job, dict) or "runs-on" not in job:
         raise ValueError("job must have a runs-on selector")
     runner = job["runs-on"]
-    docker_runner = runner == ["self-hosted", "gbg-ci"] or runner == DOCKER_EXPR
+    docker_runner = runner == DOCKER_EXPR
     if not docker_runner and runner != GENERIC:
         raise ValueError(f"unverified or hosted runner: {runner}")
     reasons, actions = check_steps(job.get("steps"))
@@ -104,7 +106,9 @@ def check_job(job):
                 raise ValueError(f"invalid {field}")
             reasons.insert(0, field)
     if reasons and not docker_runner:
-        raise ValueError(f"Docker job requires gbg-ci: {', '.join(reasons)}")
+        raise ValueError(f"Docker job requires CI_DOCKER_RUNS_ON: {', '.join(reasons)}")
+    if docker_runner and not reasons:
+        raise ValueError("CI_DOCKER_RUNS_ON is reserved for jobs that use Docker")
     return reasons, actions
 
 

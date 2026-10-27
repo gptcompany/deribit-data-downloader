@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: [self-hosted, gbg-ci]
+    runs-on: ${{ fromJSON(vars.CI_DOCKER_RUNS_ON || '["ubuntu-latest"]') }}
     permissions:
       contents: write
       id-token: write
@@ -38,7 +38,7 @@ jobs:
           generate_release_notes: true
 
   docker-publish:
-    runs-on: [self-hosted, gbg-ci]
+    runs-on: ${{ fromJSON(vars.CI_DOCKER_RUNS_ON || '["ubuntu-latest"]') }}
     needs: release
     permissions:
       packages: write
