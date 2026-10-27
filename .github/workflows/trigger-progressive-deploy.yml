@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   dispatch:
-    runs-on: ${{ vars.CI_RUNS_ON }}
+    runs-on: ubuntu-latest
     steps:
       - name: Send repository_dispatch to progressive-deploy
         env:

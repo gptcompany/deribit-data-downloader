@@ -1,5 +1,0 @@
-[
-  {"workflow": "ci.yml", "job": "docker"},
-  {"workflow": "release.yml", "job": "release"},
-  {"workflow": "release.yml", "job": "docker-publish"}
-]

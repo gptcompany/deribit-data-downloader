@@ -112,6 +112,7 @@ def test_stale_allowlist_entry_fails(tmp_path, monkeypatch, capsys):
     (workflows / "ci.yml").write_text(
         f"jobs:\n  docker:\n    runs-on: {DOCKER_FORM}\n    steps:\n      - run: true\n"
     )
+    (tmp_path / ".github/runner-policy.json").write_text('{"visibility": "private"}')
     allowlist = tmp_path / ".github/docker-jobs.json"
     allowlist.write_text(json.dumps([ENTRY, {"workflow": "old.yml", "job": "gone"}]))
     monkeypatch.setattr(checker, "ROOT", tmp_path)
@@ -121,3 +122,60 @@ def test_stale_allowlist_entry_fails(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "old.yml:gone ERROR: listed job does not exist" in out
     assert "ci.yml:docker runs-on=" in out
+
+
+def test_repository_workflows_pass():
+    # Public repository: no action metadata lookup, so this runs offline in CI.
+    assert checker.main() == 0
+
+
+def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
+    workflows = tmp_path / ".github/workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "ci.yml").write_text(
+        f"jobs:\n  docker:\n    runs-on: {runner}\n    steps:\n      - run: true\n"
+    )
+    (tmp_path / ".github/runner-policy.json").write_text('{"visibility": "public"}')
+    allowlist = tmp_path / ".github/docker-jobs.json"
+    if docker_jobs:
+        allowlist.write_text(json.dumps([ENTRY]))
+    monkeypatch.setattr(checker, "ROOT", tmp_path)
+    monkeypatch.setattr(checker, "DOCKER_JOBS_FILE", allowlist)
+
+
+@pytest.mark.parametrize(
+    ("runner", "expected"),
+    [
+        ("ubuntu-latest", 0),
+        # F-491: a public repository job on CI_RUNS_ON or a self-hosted selector stays queued forever.
+        ("${{ vars.CI_RUNS_ON }}", 1),
+        (DOCKER_FORM, 1),
+        ("[self-hosted, sg-ci]", 1),
+        ("[ubuntu-latest]", 1),
+    ],
+)
+def test_public_repository_requires_ubuntu_latest(tmp_path, monkeypatch, runner, expected):
+    public_repo(tmp_path, monkeypatch, runner)
+    assert checker.main() == expected
+
+
+def test_public_repository_rejects_docker_allowlist(tmp_path, monkeypatch, capsys):
+    public_repo(tmp_path, monkeypatch, "ubuntu-latest", docker_jobs=True)
+    assert checker.main() == 1
+    assert "not allowed in a public repository" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{",
+        "{}",
+        json.dumps({"visibility": "internal"}),
+        json.dumps({"visibility": "public", "why": "x"}),
+    ],
+)
+def test_invalid_runner_policy_fails(tmp_path, text):
+    path = tmp_path / "runner-policy.json"
+    path.write_text(text)
+    with pytest.raises(ValueError):
+        checker.visibility(path)

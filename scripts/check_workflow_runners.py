@@ -3,6 +3,7 @@
 
 import functools
 import subprocess
+from typing import Literal
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -17,6 +18,20 @@ GENERIC = "${{ vars.CI_RUNS_ON }}"
 # from step text is a blocklist that any new spelling bypasses.
 DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["ubuntu-latest"]\') }}'
 DOCKER_JOBS_FILE = ROOT / ".github/docker-jobs.json"
+# F-491: the org runner group holding sg-ci and dell-ci excludes public repositories, so a public repository job on a
+# self-hosted selector or on CI_RUNS_ON stays queued forever without an error; public repositories get free hosted
+# minutes instead. The visibility is declared in a versioned file, not read at runtime.
+POLICY_NAME = ".github/runner-policy.json"
+PUBLIC_RUNNER = "ubuntu-latest"
+
+
+class RunnerPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    visibility: Literal["public", "private"]
+
+
+def visibility(path):
+    return RunnerPolicy.model_validate_json(path.read_bytes()).visibility
 
 
 class DockerJob(BaseModel):
@@ -122,13 +137,34 @@ def check_job(job, listed=False):
     return reasons, actions
 
 
+def check_public(paths):
+    """Public repository: every job runs on the literal hosted runner, and no Docker allowlist exists."""
+    failed = DOCKER_JOBS_FILE.exists()
+    if failed:
+        print(f"{DOCKER_JOBS_FILE.name} ERROR: the Docker runner form is not allowed in a public repository")
+    for path in paths:
+        workflow = yaml.safe_load(path.read_text())
+        if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
+            raise ValueError(f"invalid workflow: {path}")
+        for name, job in workflow["jobs"].items():
+            runner = job.get("runs-on") if isinstance(job, dict) else None
+            if runner == PUBLIC_RUNNER:
+                print(f"{path.name}:{name} runs-on={runner} ok (public)")
+            else:
+                print(f"{path.name}:{name} runs-on={runner} ERROR: public repository requires runs-on: {PUBLIC_RUNNER}")
+                failed = True
+    return int(failed)
+
+
 def main():
-    failed = False
-    allowed = docker_jobs()
-    seen = set()
     paths = sorted((ROOT / ".github/workflows").glob("*.y*ml"))
     if not paths:
         raise ValueError("no workflows found")
+    if visibility(ROOT / POLICY_NAME) == "public":
+        return check_public(paths)
+    failed = False
+    allowed = docker_jobs()
+    seen = set()
     for path in paths:
         workflow = yaml.safe_load(path.read_text())
         if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
