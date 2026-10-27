@@ -10,7 +10,7 @@ import logging
 import re
 import time
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -151,7 +151,7 @@ class DeribitFetcher:
         # Parse expiry: DDMMMYY -> datetime (08:00 timezone.utc)
         try:
             expiry = datetime.strptime(groups["expiry"], "%d%b%y")
-            expiry = expiry.replace(hour=8, minute=0, second=0, tzinfo=timezone.utc)
+            expiry = expiry.replace(hour=8, minute=0, second=0, tzinfo=UTC)
         except ValueError:
             return None
 
@@ -183,7 +183,7 @@ class DeribitFetcher:
             trade = OptionTrade(
                 trade_id=trade_id,
                 instrument_id=instrument_name,
-                timestamp=datetime.fromtimestamp(trade_data["timestamp"] / 1000, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(trade_data["timestamp"] / 1000, tz=UTC),
                 price=float(trade_data["price"]),
                 iv=iv_decimal,
                 amount=float(trade_data["amount"]),
@@ -344,7 +344,7 @@ class DeribitFetcher:
                 # row format: [timestamp, open, high, low, close]
                 try:
                     candle = DVOLCandle(
-                        timestamp=datetime.fromtimestamp(row[0] / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(row[0] / 1000, tz=UTC),
                         open=float(row[1]),
                         high=float(row[2]),
                         low=float(row[3]),

@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Issue severity level."""
 
     CRITICAL = "critical"
@@ -143,7 +143,7 @@ class DataValidator:
                 issues.extend(file_issues)
 
                 # Gap detection
-                file_date = datetime.strptime(file_path.stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                file_date = datetime.strptime(file_path.stem, "%Y-%m-%d").replace(tzinfo=UTC)
                 if prev_date:
                     gap = (file_date - prev_date).days
                     if gap > 1:

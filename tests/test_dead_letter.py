@@ -1,6 +1,6 @@
 """Tests for dead letter queue."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -111,7 +111,7 @@ class TestDeadLetterQueue:
         failed = FailedTrade(
             raw_data={"trade_id": "test"},
             error="Test error",
-            timestamp=datetime(2024, 1, 15, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 15, tzinfo=UTC),
             currency="BTC",
         )
         dlq.add(failed)
@@ -119,7 +119,7 @@ class TestDeadLetterQueue:
         # Load with filter that excludes it
         failures = dlq.load_failures(
             "BTC",
-            start_date=datetime(2024, 2, 1, tzinfo=timezone.utc),
+            start_date=datetime(2024, 2, 1, tzinfo=UTC),
         )
 
         assert len(failures) == 0
@@ -127,8 +127,8 @@ class TestDeadLetterQueue:
         # Load with filter that includes it
         failures = dlq.load_failures(
             "BTC",
-            start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            end_date=datetime(2024, 1, 31, tzinfo=timezone.utc),
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+            end_date=datetime(2024, 1, 31, tzinfo=UTC),
         )
 
         assert len(failures) == 1
