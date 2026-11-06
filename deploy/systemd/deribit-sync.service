@@ -20,6 +20,13 @@ ExecStopPost=-+/usr/bin/systemctl start --no-block deribit-sync-metrics.service
 TimeoutStartSec=6h
 Restart=no
 Nice=10
+# Sandbox: only the catalog is writable. systemd does not expand ${VAR} in
+# ReadWritePaths, so a host with another DERIBIT_CATALOG_PATH overrides it with
+# a drop-in (README, "Host variables").
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/media/sam/2TB-NVMe/data/deribit_options
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=deribit-sync

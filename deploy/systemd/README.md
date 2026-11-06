@@ -21,6 +21,10 @@ Defaults are in the units; override per host in `/etc/default/deribit-sync` (not
 | `DERIBIT_CATALOG_PATH` | `/media/sam/2TB-NVMe/data/deribit_options` |
 | `DERIBIT_METRICS_FILE` | `/var/lib/prometheus/node-exporter/deribit_catalog.prom` |
 
+`deribit-sync.service` is sandboxed (`ProtectSystem=strict`): only the default catalog path is writable. systemd does
+not expand `${DERIBIT_CATALOG_PATH}` in `ReadWritePaths`, so a host with another catalog path adds a drop-in
+(`systemctl edit deribit-sync.service`) with `ReadWritePaths=` (empty, to reset) and then the path.
+
 ## Install (operator)
 
 ```sh

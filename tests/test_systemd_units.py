@@ -21,3 +21,13 @@ def test_service_runs_unprivileged(unit: str) -> None:
     # The unit executes a .venv binary that user sam can modify: running as
     # root would be a local privilege escalation.
     assert _service(unit)["Service"].get("User") == "sam"
+
+
+def test_sync_service_is_sandboxed() -> None:
+    svc = _service("deribit-sync.service")["Service"]
+    assert svc.get("NoNewPrivileges") == "true"
+    assert svc.get("PrivateTmp") == "true"
+    assert svc.get("ProtectSystem") == "strict"
+    assert (
+        svc.get("ReadWritePaths") == svc.get("Environment", "").split("DERIBIT_CATALOG_PATH=")[-1]
+    )
