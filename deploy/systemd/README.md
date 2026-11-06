@@ -34,5 +34,6 @@ sudo systemctl start --no-block deribit-sync.service    # first catch-up, ~15 mi
 ## Metrics and alerts
 
 `deribit_catalog_last_trade_timestamp_seconds{currency}`, `deribit_catalog_last_dvol_timestamp_seconds{currency}`,
-`deribit_catalog_scan_timestamp_seconds`. Series without data are omitted. The alert rules
-(`time() - last_* > 3d`, `absent(...)`, scan older than 3h) live in monitoring-stack, group `deribit-catalog`.
+`deribit_catalog_scan_timestamp_seconds`. Series without data are omitted. Proposed rules (to be added in
+monitoring-stack, not yet there): `time() - last_trade > 3d`, `time() - last_dvol > 3d`, `absent(scan)` and
+`time() - scan > 3h`, each per currency where it applies.
