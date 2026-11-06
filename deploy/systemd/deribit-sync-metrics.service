@@ -1,0 +1,20 @@
+[Unit]
+Description=Deribit catalog freshness as node_exporter textfile
+Documentation=https://github.com/gptcompany/deribit-data-downloader/blob/master/deploy/systemd/README.md
+
+[Service]
+Type=oneshot
+Environment=DERIBIT_REPO_ROOT=/media/sam/1TB/deribit-data-downloader
+Environment=DERIBIT_CATALOG_PATH=/media/sam/2TB-NVMe/data/deribit_options
+Environment=DERIBIT_METRICS_FILE=/var/lib/prometheus/node-exporter/deribit_catalog.prom
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=-/etc/default/deribit-sync
+ExecStart=/usr/bin/env ${DERIBIT_REPO_ROOT}/.venv/bin/deribit-data metrics --catalog ${DERIBIT_CATALOG_PATH} --output ${DERIBIT_METRICS_FILE}
+TimeoutStartSec=300
+Nice=19
+IOSchedulingClass=idle
+# The textfile directory is root-owned; the catalog is only read.
+ProtectSystem=strict
+ReadWritePaths=/var/lib/prometheus/node-exporter
+PrivateTmp=true
+SyslogIdentifier=deribit-sync-metrics

@@ -1,8 +1,8 @@
 [Unit]
-Description=Daily Deribit Options Data Sync (Docker)
+Description=Daily Deribit options catalog catch-up
 
 [Timer]
-OnCalendar=*-*-* 06:00:00
+OnCalendar=*-*-* 06:00:00 UTC
 Persistent=true
 RandomizedDelaySec=300
 

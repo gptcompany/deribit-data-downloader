@@ -6,6 +6,8 @@ Commands:
 - dvol: Download DVOL index
 - validate: Run validation
 - info: Show catalog info
+- catchup: Resume trades and DVOL from the catalog tail
+- metrics: Write catalog freshness as a Prometheus textfile
 """
 
 from __future__ import annotations
@@ -27,12 +29,14 @@ from deribit_data.checkpoint import CheckpointManager
 from deribit_data.config import DeribitConfig
 from deribit_data.dead_letter import DeadLetterQueue
 from deribit_data.fetcher import DeribitFetcher
+from deribit_data.freshness import dvol_resume_start, render_metrics, write_metrics
 from deribit_data.manifest import ManifestManager
 from deribit_data.reconciliation import DataReconciler
 from deribit_data.storage import ParquetStorage
 from deribit_data.validator import DataValidator
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(verbose: bool) -> None:
@@ -296,6 +300,14 @@ def sync(ctx: click.Context, currency: str, catalog: Path | None) -> None:
             for f in written_files:
                 manifest.update_file(f)
             total_trades += len(batch)
+            logger.info(
+                "sync %s: batch=%d total=%d up_to=%s files=%d",
+                currency,
+                len(batch),
+                total_trades,
+                max(t.timestamp for t in batch).isoformat(),
+                len(written_files),
+            )
 
     manifest.save()
     console.print(f"[green]Synced {total_trades:,} new trades[/green]")
@@ -362,6 +374,68 @@ def dvol(
         console.print(f"[green]Saved {len(candles)} DVOL candles[/green]")
     else:
         console.print("[yellow]No DVOL data found[/yellow]")
+
+
+@main.command()
+@click.option("--catalog", type=click.Path(path_type=Path), default=None, help="Catalog path")
+@click.option(
+    "--output",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Prometheus textfile to write (node_exporter textfile directory)",
+)
+def metrics(catalog: Path | None, output: Path) -> None:
+    """Write catalog freshness as a Prometheus textfile."""
+    cfg = DeribitConfig.from_env()
+    if catalog:
+        cfg = cfg.model_copy(update={"catalog_path": catalog})
+    storage = ParquetStorage(cfg.catalog_path, cfg.compression, cfg.compression_level)
+    write_metrics(output, render_metrics(storage, ["BTC", "ETH"], datetime.now(UTC)))
+
+
+@main.command()
+@click.option("--catalog", type=click.Path(path_type=Path), default=None, help="Catalog path")
+@click.pass_context
+def catchup(ctx: click.Context, catalog: Path | None) -> None:
+    """Resume BTC and ETH trades and DVOL from where the catalog stops.
+
+    Trades resume from the newest stored trade, DVOL from the day after its
+    newest candle. Every step is logged; a failed step does not skip the others
+    but makes the command exit non-zero.
+    """
+    cfg = DeribitConfig.from_env()
+    if catalog:
+        cfg = cfg.model_copy(update={"catalog_path": catalog})
+    storage = ParquetStorage(cfg.catalog_path, cfg.compression, cfg.compression_level)
+    fallback = datetime.combine(cfg.historical_start_date, datetime.min.time(), tzinfo=UTC)
+
+    failures: list[str] = []
+    for currency in ("BTC", "ETH"):
+        start = dvol_resume_start(storage, currency, fallback)
+        steps = (
+            ("trades", sync, {"currency": currency, "catalog": cfg.catalog_path}),
+            (
+                "dvol",
+                dvol,
+                {"currency": currency, "start": start, "end": None, "catalog": cfg.catalog_path},
+            ),
+        )
+        for name, command, kwargs in steps:
+            began = time.monotonic()
+            logger.info("catchup %s %s: start", currency, name)
+            try:
+                ctx.invoke(command, **kwargs)
+            except Exception:
+                logger.exception("catchup %s %s: FAILED", currency, name)
+                failures.append(f"{currency}/{name}")
+            else:
+                logger.info(
+                    "catchup %s %s: done in %.0fs", currency, name, time.monotonic() - began
+                )
+
+    if failures:
+        logger.error("catchup incomplete, failed steps: %s", ", ".join(failures))
+        sys.exit(1)
 
 
 @main.command()
