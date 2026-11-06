@@ -399,8 +399,8 @@ def metrics(catalog: Path | None, output: Path) -> None:
 def catchup(ctx: click.Context, catalog: Path | None) -> None:
     """Resume BTC and ETH trades and DVOL from where the catalog stops.
 
-    Trades resume from the newest stored trade, DVOL from the day after its
-    newest candle. Every step is logged; a failed step does not skip the others
+    Trades resume from the newest stored trade, DVOL from 00:00 of its
+    newest candle day. Every step is logged; a failed step does not skip the others
     but makes the command exit non-zero.
     """
     cfg = DeribitConfig.from_env()
