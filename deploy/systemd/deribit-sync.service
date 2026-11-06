@@ -1,0 +1,32 @@
+[Unit]
+Description=Deribit options catalog catch-up (trades and DVOL, BTC and ETH)
+Documentation=https://github.com/gptcompany/deribit-data-downloader/blob/master/deploy/systemd/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sam
+Group=sam
+# Defaults; override per host in /etc/default/deribit-sync (see README.md).
+Environment=DERIBIT_REPO_ROOT=/media/sam/1TB/deribit-data-downloader
+Environment=DERIBIT_CATALOG_PATH=/media/sam/2TB-NVMe/data/deribit_options
+EnvironmentFile=-/etc/default/deribit-sync
+# Resumes from the newest stored trade and 00:00 of the newest DVOL candle day,
+# so a long outage heals itself; progress goes to the journal (SyslogIdentifier).
+ExecStart=/usr/bin/env ${DERIBIT_REPO_ROOT}/.venv/bin/deribit-data catchup --catalog ${DERIBIT_CATALOG_PATH}
+# Catalog freshness is refreshed right after each run, also a failed one.
+ExecStopPost=-+/usr/bin/systemctl start --no-block deribit-sync-metrics.service
+TimeoutStartSec=6h
+Restart=no
+Nice=10
+# Sandbox: only the catalog is writable. systemd does not expand ${VAR} in
+# ReadWritePaths, so a host with another DERIBIT_CATALOG_PATH overrides it with
+# a drop-in (README, "Host variables").
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/media/sam/2TB-NVMe/data/deribit_options
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=deribit-sync

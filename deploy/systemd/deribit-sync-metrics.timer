@@ -1,0 +1,9 @@
+[Unit]
+Description=Hourly Deribit catalog freshness, independent of the sync timer
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

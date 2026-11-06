@@ -151,8 +151,7 @@ docker compose run --rm deribit-sync
 ```
 
 Data persistence is controlled by `DERIBIT_DATA_ROOT` (volume mount in `docker-compose.yml`).
-On this host, set `DERIBIT_REPO_ROOT` and `DERIBIT_DATA_ROOT` in `/etc/downloader-sync.env` and use the
-`deploy/systemd/deribit-sync-docker.service` unit, which reads those variables via `EnvironmentFile=`.
+On the Dell the sync runs natively, not in Docker: see [deploy/systemd/README.md](deploy/systemd/README.md).
 
 ### Docker-First Execution (CI)
 These services are intended to run **inside Docker** (CI actions launch Docker services, not systemd).
@@ -190,13 +189,8 @@ On push to `master` (when `Dockerfile`, `docker-compose.yml`, `pyproject.toml`, 
 **Required secret**: `PROGRESSIVE_DEPLOY_PAT` (GitHub classic PAT with `repo` scope)
 
 ### Local Execution
-The service runs nightly via systemd timer (`deribit-sync-docker.timer` at 06:00), syncing BTC then ETH sequentially:
-```bash
-docker compose run --rm deribit-sync      # BTC
-docker compose run --rm deribit-sync-eth  # ETH
-```
-
-The systemd service uses `dotenvx` to load secrets from `/media/sam/1TB/.env` (SSOT) and `cron-wrapper.sh` from `monitoring-stack` for notifications. Runtime env vars are sourced from `/etc/downloader-sync.env` (contains `DERIBIT_REPO_ROOT`).
+On the Dell the catalog is kept up to date by `deribit-sync.timer` (06:00 UTC, `deribit-data catchup`), with
+freshness exported by `deribit-sync-metrics.timer`. Install, variables and alerts: [deploy/systemd/README.md](deploy/systemd/README.md).
 
 Additional compose profiles are available for manual backfill:
 ```bash
