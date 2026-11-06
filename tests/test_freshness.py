@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from deribit_data.cli import main
@@ -23,11 +24,15 @@ def test_dvol_resume_start_empty_catalog_uses_fallback(tmp_catalog: Path) -> Non
     assert dvol_resume_start(storage, "BTC", fallback) == fallback
 
 
-def test_dvol_resume_start_is_day_after_last_candle(tmp_catalog: Path) -> None:
+@pytest.mark.parametrize("hour", [6, 23])
+def test_dvol_resume_start_is_midnight_of_last_candle_day(tmp_catalog: Path, hour: int) -> None:
+    # Il timer gira alle 06:00 UTC e dvol scarica fino a "adesso": le candele
+    # delle ore successive di quel giorno non esistono ancora. Ripartire dal
+    # giorno dopo le perderebbe per sempre; save_dvol deduplica il resto.
     storage = ParquetStorage(tmp_catalog)
-    storage.save_dvol([_candle(datetime(2026, 2, 5, 23, 0, tzinfo=UTC))], "BTC")
+    storage.save_dvol([_candle(datetime(2026, 2, 5, hour, 0, tzinfo=UTC))], "BTC")
     got = dvol_resume_start(storage, "BTC", datetime(2021, 3, 1, tzinfo=UTC))
-    assert got == datetime(2026, 2, 6, tzinfo=UTC)
+    assert got == datetime(2026, 2, 5, tzinfo=UTC)
 
 
 def test_render_metrics_reports_last_timestamps(
