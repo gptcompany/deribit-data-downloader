@@ -12,7 +12,7 @@ Group=sam
 Environment=DERIBIT_REPO_ROOT=/media/sam/1TB/deribit-data-downloader
 Environment=DERIBIT_CATALOG_PATH=/media/sam/2TB-NVMe/data/deribit_options
 EnvironmentFile=-/etc/default/deribit-sync
-# Resumes from the newest stored trade and the day after the newest DVOL candle,
+# Resumes from the newest stored trade and 00:00 of the newest DVOL candle day,
 # so a long outage heals itself; progress goes to the journal (SyslogIdentifier).
 ExecStart=/usr/bin/env ${DERIBIT_REPO_ROOT}/.venv/bin/deribit-data catchup --catalog ${DERIBIT_CATALOG_PATH}
 # Catalog freshness is refreshed right after each run, also a failed one.

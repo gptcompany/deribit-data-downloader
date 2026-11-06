@@ -11,7 +11,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 from deribit_data.storage import ParquetStorage
@@ -31,12 +31,14 @@ def last_dvol_timestamp(storage: ParquetStorage, currency: str) -> datetime | No
 def dvol_resume_start(storage: ParquetStorage, currency: str, fallback: datetime) -> datetime:
     """First day to download so the DVOL series continues without gap.
 
-    Re-downloading the whole last day is harmless: save_dvol deduplicates.
+    Restarts at 00:00 of the last candle's own day: the sync runs mid-morning and
+    dvol fetches up to now, so the later candles of that day are still missing.
+    Re-downloading the stored ones is harmless: save_dvol deduplicates.
     """
     last = last_dvol_timestamp(storage, currency)
     if last is None:
         return fallback
-    return datetime(last.year, last.month, last.day, tzinfo=UTC) + timedelta(days=1)
+    return datetime(last.year, last.month, last.day, tzinfo=UTC)
 
 
 def render_metrics(storage: ParquetStorage, currencies: Sequence[str], now: datetime) -> str:

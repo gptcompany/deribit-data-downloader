@@ -6,8 +6,8 @@
 | `deribit-sync-metrics.timer` / `.service` | hourly and after each sync, root, read-only on the catalog: writes `deribit_catalog.prom` |
 
 `catchup` resumes by itself: trades from the newest stored trade (`sync` semantics, deduplicated by `trade_id`),
-DVOL from the day after its newest candle. After an outage the first run therefore backfills the whole gap
-(2026-06-30 onward for trades, 2026-02-06 onward for DVOL); progress is in the journal
+DVOL from 00:00 of its newest candle day. After an outage the first run therefore backfills the whole gap
+(2026-06-30 onward for trades, 2026-02-05 onward for DVOL); progress is in the journal
 (`journalctl -u deribit-sync -f`: `sync BTC: batch=… total=… up_to=…`, `catchup BTC dvol: done in …s`).
 A failed step is logged, the others still run, the exit code is 1.
 
