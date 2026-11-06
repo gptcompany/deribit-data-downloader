@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow.parquet as pq
+import pytest
 
 from deribit_data.models import DVOLCandle, OptionTrade, OptionType, TradeDirection
 from deribit_data.storage import ParquetStorage
@@ -170,3 +171,21 @@ class TestParquetStorage:
         # No .tmp files should exist
         tmp_files = list(tmp_catalog.rglob("*.tmp"))
         assert len(tmp_files) == 0
+
+
+def test_atomic_write_failure_leaves_no_temp_and_keeps_old_file(
+    tmp_catalog: Path, sample_trades: list[OptionTrade], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = ParquetStorage(tmp_catalog)
+    (target,) = storage.save_trades(sample_trades[:1], "ETH")
+    before = target.read_bytes()
+
+    def boom(*args: object, **kwargs: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("deribit_data.storage.pq.write_table", boom)
+    with pytest.raises(OSError):
+        storage.save_trades(sample_trades[1:2], "ETH")
+
+    assert target.read_bytes() == before
+    assert list(tmp_catalog.rglob("*.tmp")) == []

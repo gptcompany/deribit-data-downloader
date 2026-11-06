@@ -6,6 +6,8 @@ Provides crash-safe writes using tmp + rename pattern.
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -79,16 +81,23 @@ class ParquetStorage:
             table: PyArrow table to write.
             file_path: Target file path.
         """
-        tmp_path = file_path.with_suffix(".parquet.tmp")
-
-        # Write to temp file
+        # Unique name: two writers on one partition must not share a temp file.
+        fd, tmp_name = tempfile.mkstemp(
+            dir=file_path.parent, prefix=f".{file_path.name}.", suffix=".tmp"
+        )
         write_kwargs: dict[str, Any] = {"compression": self.compression}
         if self.compression == "zstd":
             write_kwargs["compression_level"] = self.compression_level
-        pq.write_table(table, tmp_path, **write_kwargs)
-
-        # Atomic rename
-        tmp_path.rename(file_path)
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                pq.write_table(table, fh, **write_kwargs)
+                fh.flush()
+                os.fsync(fh.fileno())  # data on disk before the rename publishes it
+            os.chmod(tmp_name, 0o644)  # mkstemp creates 0600; readers run as other users
+            os.replace(tmp_name, file_path)
+        except BaseException:
+            Path(tmp_name).unlink(missing_ok=True)
+            raise
 
         logger.debug(f"Wrote {table.num_rows} rows to {file_path}")
 
