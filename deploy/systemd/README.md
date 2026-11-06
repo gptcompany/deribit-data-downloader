@@ -3,7 +3,7 @@
 | unit | what |
 |---|---|
 | `deribit-sync.timer` / `.service` | 06:00 UTC, user `sam`: `deribit-data catchup` (BTC and ETH trades, then DVOL) |
-| `deribit-sync-metrics.timer` / `.service` | hourly and after each sync, root, read-only on the catalog: writes `deribit_catalog.prom` |
+| `deribit-sync-metrics.timer` / `.service` | hourly and after each sync, user `sam`, read-only on the catalog: writes `deribit_catalog.prom` |
 
 `catchup` resumes by itself: trades from the newest stored trade (`sync` semantics, deduplicated by `trade_id`),
 DVOL from 00:00 of its newest candle day. After an outage the first run therefore backfills the whole gap
@@ -29,6 +29,16 @@ sudo install -m 644 deploy/systemd/deribit-sync*.{service,timer} /etc/systemd/sy
 sudo systemctl daemon-reload
 sudo systemctl enable --now deribit-sync-metrics.timer deribit-sync.timer
 sudo systemctl start --no-block deribit-sync.service    # first catch-up, ~15 min for 130 days
+```
+
+## Textfile directory
+
+Both services run as `sam`, never root: they execute `.venv/bin/deribit-data`, which `sam` can modify.
+The metrics service therefore needs `DERIBIT_METRICS_FILE`'s directory writable by `sam`. One-time operator step
+(an ACL keeps the directory owned by the node_exporter user, which only reads the 0644 file):
+
+```sh
+sudo setfacl -m u:sam:rwx /var/lib/prometheus/node-exporter
 ```
 
 ## Metrics and alerts

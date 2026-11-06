@@ -4,6 +4,9 @@ Documentation=https://github.com/gptcompany/deribit-data-downloader/blob/master/
 
 [Service]
 Type=oneshot
+# Not root: it runs a .venv binary that sam can modify.
+User=sam
+Group=sam
 Environment=DERIBIT_REPO_ROOT=/media/sam/1TB/deribit-data-downloader
 Environment=DERIBIT_CATALOG_PATH=/media/sam/2TB-NVMe/data/deribit_options
 Environment=DERIBIT_METRICS_FILE=/var/lib/prometheus/node-exporter/deribit_catalog.prom
@@ -13,7 +16,7 @@ ExecStart=/usr/bin/env ${DERIBIT_REPO_ROOT}/.venv/bin/deribit-data metrics --cat
 TimeoutStartSec=300
 Nice=19
 IOSchedulingClass=idle
-# The textfile directory is root-owned; the catalog is only read.
+# The textfile directory must be writable by sam (README, "Textfile directory"); the catalog is only read.
 ProtectSystem=strict
 ReadWritePaths=/var/lib/prometheus/node-exporter
 PrivateTmp=true
