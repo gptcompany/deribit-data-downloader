@@ -25,7 +25,9 @@ Opzioni lineari USDC, ordini, posizioni private, acquisti di dataset, deploy e s
 
 La futura implementazione dimostra questi scenari in CI con fixture registrate e versionate prive di credenziali.
 Le prove devono includere OI zero contro OI mancante, gamma e dimensioni BTC/ETH, IV percentuale contro frazione e replay di update parziali.
-Questa PR non aggiunge test documentali: **Controprova: non applicabile: solo documentazione**.
+Test documentali RED → GREEN: **non applicabile: solo documentazione**; il repo non prevede un runner documentale e la CI esclude Markdown/docs.
+Controprova documentale osservata prima della correzione: review `rv-dr9` sulla head `ea180804…`, M1 DEX signed 0 USD contro lordo 500.000 USD; M2 storico 12:00 UTC trasformato erroneamente in 04:00 UTC.
+Le definizioni e gli esempi sotto correggono queste contraddizioni; non sono test applicativi eseguiti.
 
 ## Requisiti funzionali
 
@@ -37,7 +39,7 @@ Questa PR non aggiunge test documentali: **Controprova: non applicabile: solo do
 - FR6: non sostituire valori mancanti con zero, DVOL, ultima trade-IV o interpolazione non dichiarata.
 - FR7: checkpoint dopo persistenza e manifest; eventuali file orfani si riconciliano da hash/chiavi senza cancellare dati validi.
 - FR8: pubblicare snapshot parziale con coverage e cause; avanzare `last_complete_snapshot` solo quando tutti gli strumenti attesi sono rappresentati validamente.
-- FR9: dati di terzi entrano con provider/licenza/periodo/campi e timestamp di disponibilità; mai riscrivere la provenienza come Deribit raccolto direttamente.
+- FR9: dati di terzi entrano con provider/licenza/periodo/campi e timestamp di disponibilità e tempi/ritardi per campo e osservazione (noti, stimati o sconosciuti); mai riscrivere la provenienza come Deribit raccolto direttamente.
 
 ## Cadenza e retention proposte, da confermare Q2
 
@@ -61,12 +63,12 @@ Una riga per `(provider, environment, currency, snapshot_slot, instrument_name, 
 | Gruppo | Campi e semantica obbligatori |
 |---|---|
 | Identità | schema_version, provider, environment, currency, instrument_name, metadata_version/hash, snapshot_slot |
-| Tempi | `timestamp` = slot per manifest; received_at, source_timestamp nullable, snapshot_started_at/completed_at; last-update per gruppo di campi |
+| Tempi | `timestamp` = slot per manifest; received_at = acquisizione nostra, source_timestamp nullable = timestamp messaggio fonte, snapshot_started_at/completed_at; per campo ultimo source/received/effective_at e relativa qualità |
 | Contratto | strike, expiration_timestamp, option_type C/P, instrument_type, state, base/quote/settlement_currency, contract_size, price_index |
 | Prezzi | bid_price, ask_price, mark_price, underlying_price, underlying_index; unità/native currency conservate, USD conversion separata e tracciata |
 | Volatilità | bid_iv, ask_iv, mark_iv in frazione annua; valore percentuale originale preservato nei raw; null diverso da 0 |
 | Greche | delta, gamma, vega, theta, rho native e convenzione/unità fonte; greeks_received_at e ultimo timestamp noto |
-| Interesse aperto | open_interest, oi_unit = base currency per queste opzioni; oi_delay_ms = 28.800.000, oi_effective_at nullable e qualità della stima |
+| Interesse aperto | open_interest, oi_unit = base currency per queste opzioni; oi_source_timestamp, oi_received_at, oi_effective_at nullable; oi_delay_ms nullable = oi_received_at − oi_effective_at; oi_source_delay_ms nullable = oi_source_timestamp − oi_effective_at; delay_status observed/estimated/unknown, fonte/regola/periodo della stima |
 | Provenienza/qualità | endpoint/channel, raw hash/reference finché retained, collection_method, field_status, stale/missing reasons |
 
 Metadata e slot coverage sono tabelle separate, versionate: expected/received/valid/missing counts, strumenti mancanti, motivo, complete, tempi e versione universo.
@@ -78,11 +80,15 @@ Validazione tramite schema rigoroso Pydantic/PyArrow esistente esteso; unità e 
 | Fonte/campo | Età esposta al consumatore |
 |---|---|
 | Ticker prezzi/IV/greche | `now - last_source_update` se noto; anche `now - received_at`; mai una SLA di freschezza implicita |
-| Summary OI e ticker OI | Ritardo fonte 8 h più età dall'osservazione; `effective_at = observation - 8h` solo stima, non timestamp effettivo garantito |
+| Summary OI e ticker OI | Per osservazione: `now - oi_effective_at` se noto/stimato, separato da `now - oi_received_at`; stato e origine del tempo esposti. Solo feed pubblico soggetto alla release 10 novembre: ritardo fonte stimato 8 h |
 | get_instruments | Cache circa 1 min più tempo dall'acquisizione; lifecycle separato, nessuna supposizione che metadata sia tick-live |
 | Trades storici/esistenti | Timestamp evento e pubblicazione distinti; alcuni RFQ ritardati fino a 8 h, timestamp cursor da solo non prova completezza |
 | DVOL | Risoluzione candela, timestamp e tempo acquisizione; fonte aggregata, non sostituto di skew |
-| Fornitore storico | Timestamp exchange e disponibilità locale se forniti; in assenza, disponibilità storica non verificata e uso point-in-time non certificato |
+| Fornitore storico | Tempi per campo, periodo e provider; conservare timestamp exchange/effective e disponibilità originale se forniti, distinti dall’import nostro. Ritardo non verificabile = null/unknown, mai 8 h di default; point-in-time non certificato senza disponibilità originale |
+
+`source_timestamp` del messaggio non certifica il tempo effettivo di ciascun campo. Per OI pubblico nel periodo soggetto alla release, in assenza di tempo effettivo esplicito, `oi_effective_at = oi_source_timestamp − 28.800.000` è una stima documentata; senza source timestamp verificabile resta null/unknown.
+`oi_delay_ms` misura l’età all’acquisizione, incluso trasporto/backfill; `oi_source_delay_ms` separa il ritardo della fonte. Ogni campo mantiene i propri tempi anche negli update parziali; non attribuire il ritardo OI a prezzi/greche.
+Esempio storico sintetico: fonte/tempo effettivo 2026-11-09 12:00 UTC, provider dichiara ritardo fonte 0 → conservare 12:00 UTC e `oi_source_delay_ms = 0`; un import il 13 novembre registra l’acquisizione del 13 e la corrispondente età, senza sottrarre 8 h. Se il ritardo originario non è verificabile, non inventare né zero né otto ore.
 
 ## Catalogo, recovery e osservabilità
 
@@ -100,8 +106,17 @@ La raccolta conserva osservazioni; il consumatore sceglie il modello, con versio
 Skew25 = `IV_put(abs(delta)=0,25) - IV_call(delta=0,25)`; positivo significa put più cara. Butterfly25 = media delle due IV25 meno IV ATM, con definizione ATM dichiarata.
 Non copiare l'incoerenza di segno nella spec 042; delta spot/forward/premium-adjusted va deciso in Q4.
 Interpolazione solo nel dominio coperto; altrimenti risultato indisponibile con motivo. Nessuna extrapolazione nascosta.
-Per greche USD coerenti per unità base, proxy gross GEX USD per movimento 1% = `sum(gamma_USD × OI_base × S_USD² × 0,01)`; DEX USD = `sum(delta_USD × OI_base × S_USD)`.
-Sono esposizioni nozionali dell'OI, non posizionamento dealer: segno dealer non osservato; put non implica automaticamente gamma negativa.
+Per greche USD coerenti per unità base, porre `d_i = delta_USD_i × OI_base_i × S_USD` (USD) e `g_i = gamma_USD_i × OI_base_i × S_USD² × 0,01` (USD di variazione del delta nozionale per rialzo spot 1%).
+Convenzione long-option-OI: OI non negativo conta una volta il lato long di ogni contratto; delta call positivo/put negativo, gamma long positivo per entrambe; il lato short inverte entrambi i segni. Fonti: [Deribit, delta](https://insights.deribit.com/education/introduction-to-option-greeks/) e [OIC, gamma](https://www.optionseducation.org/advancedconcepts/gamma), consultate 2026-11-13. Le formule aggregate seguenti sono definizioni proposte qui, non campi ufficiali Deribit.
+
+| Misura proposta | DEX USD | GEX USD per rialzo 1% | Significato |
+|---|---|---|---|
+| Lorda (gross) | `sum(abs(d_i))` | `sum(abs(g_i))` | Nessuna compensazione tra contributi |
+| Con segno, proxy long-option-OI | `sum(d_i)` | `sum(g_i)` | Call/put si compensano in DEX; gamma long non cambia segno per le put |
+| Netta di portafoglio/dealer | `sum(delta_USD_i × q_i × S_USD)` | `sum(gamma_USD_i × q_i × S_USD² × 0,01)` | Richiede quantità base firmata `q_i`, positiva long/negativa short, del portafoglio scelto; non ricavabile dall’OI pubblico |
+
+Con spot 100.000 USD, OI call/put 10 BTC ciascuno e delta +0,25/−0,25: DEX con segno = 0 USD, DEX lordo = 500.000 USD. Non etichettare il primo come lordo o netto dealer.
+Per gamma long, GEX con segno e lordo coincidono; assegnare gamma negativa alle put sarebbe un’ulteriore ipotesi di posizionamento, non una proprietà della put. Q4 mantiene aperta la scelta del consumatore.
 Non moltiplicare ancora per contract_size quando OI è già in base coin. Non applicare queste formule alle greche native senza verificare conversione e sensibilità inverse.
 Prezzi/greche correnti + OI ritardato devono chiamarsi proxy a età mista; non «GEX live». Una vista allineata usa storico proprio e stima OI esplicita, senza anticiparne la disponibilità.
 P1: riportare incertezza/copertura, non un numero privo di qualità; P2: modelli non lineari e code pesanti, senza normalità assunta.

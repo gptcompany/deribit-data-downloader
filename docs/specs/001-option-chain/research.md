@@ -1,6 +1,6 @@
 # Ricerca: catena opzioni BTC ed ETH
 
-Data di consultazione: 2026-11-12. Base del codice: `356e5a56b7be591bd669c25384f679655fa3f514`.
+Data di consultazione: 2026-11-12; integrazione M1/M2: 2026-11-13. Base del codice: `356e5a56b7be591bd669c25384f679655fa3f514`.
 Solo ricerca e specifica; nessun acquisto, codice applicativo o deploy.
 Il repo non contiene `.specify/`: si usa il fallback `docs/specs/001-option-chain/`.
 Non contiene neppure un template PR; il body usa il modello comune gbg-agents.
@@ -99,3 +99,14 @@ GEX/DEX richiedono una somma con unità e convenzione esplicite, non una nuova l
 Nessun repo GEX specializzato mantenuto e con convenzioni Deribit verificato: non adottare formule retail con segno dealer presunto.
 Prima usare greche ufficiali; eventuale ricalcolo deve distinguere sensibilità in USD da sensibilità del premio in coin.
 SVI è opzionale nel consumatore: per la raccolta non serve alcuna nuova dipendenza quantitativa.
+
+## Integrazione review rv-dr9: segni ed età per osservazione
+
+Fonti primarie rilette il 2026-11-13: [Deribit, Introduction to Option Greeks](https://insights.deribit.com/education/introduction-to-option-greeks/) per delta call positivo/put negativo; [OIC, Gamma](https://www.optionseducation.org/advancedconcepts/gamma) per gamma positivo delle long call e long put, negativo delle short. Queste sono convenzioni di sensibilità del valore USD; non validano automaticamente la conversione delle greche native inverse.
+Le somme sono definizioni proposte nella spec: DEX lordo somma i valori assoluti dei contributi delta nozionali; DEX con segno conserva il segno della delta nella convenzione long-option-OI. GEX lordo somma i valori assoluti dei contributi gamma per rialzo spot 1%; GEX con segno long-option-OI è positivo per call e put e coincide col lordo. Il netto di un portafoglio richiede quantità long/short firmate di quel portafoglio; OI non identifica il lato dealer.
+Controprova M1 sulla head precedente: con 10 BTC OI call e 10 BTC put, delta +0,25/−0,25 e spot 100.000 USD, la somma con segno dà 0 USD ma il lordo dà 500.000 USD. La proposta Q4 deve nominare esplicitamente la misura scelta.
+
+La [release 10 novembre](https://support.deribit.com/hc/en-us/articles/40275495462301-10-November-2026) e [public/ticker](https://docs.deribit.com/api-reference/market-data/public-ticker), riletti il 2026-11-13, descrivono otto ore per OI pubblico nel periodo soggetto alla regola; non certificano il ritardo di tutti gli archivi storici.
+Registrare per ogni campo/osservazione tempo della fonte, acquisizione nostra, tempo effettivo e qualità observed/estimated/unknown. Età all’acquisizione = acquisizione − tempo effettivo; ritardo fonte = tempo fonte − tempo effettivo, distinti dal trasporto e dall’import tardivo. Timestamp del messaggio non prova che OI, prezzi e greche abbiano la stessa età.
+Solo per il feed/periodo coperto dalla regola, OI effective può essere stimato come timestamp fonte meno 8 h, con riferimento alla release; se il timestamp o la regola applicabile non sono verificabili, tempo effettivo e ritardi restano null/unknown. Preservare tempi e disponibilità originale del provider storico senza applicare un default globale.
+Controprova M2 sintetica: OI storico del 9 novembre alle 12:00 UTC, ritardo fonte dichiarato 0, deve restare riferito alle 12:00; sottrarre 8 h lo falsifica alle 04:00. Un import successivo conserva separatamente la propria acquisizione e non dimostra disponibilità storica point-in-time.

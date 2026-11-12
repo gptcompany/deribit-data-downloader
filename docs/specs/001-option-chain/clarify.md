@@ -19,8 +19,8 @@ Le cinque domande sono ordinate per impatto; le proposte restano esplicitamente 
    Richiedere conferma di campi, incidenti e applicabilità delle restrizioni Coinbase a Deribit prima di uso ML/redistribuzione.
    Risposta: aperta. Impatto: backfill e disponibilità point-in-time; FR9.
 
-4. **Semantica analitica:** confermare skew put-minus-call, delta spot/forward/premium-adjusted e proxy GEX/DEX gross con OI ritardato visibile?
-   Proposta: greche fonte conservate, gross exposure senza segno dealer; conversione USD esplicitamente validata prima di calcolo.
+4. **Semantica analitica:** confermare skew put-minus-call, delta spot/forward/premium-adjusted e proxy GEX/DEX lordi (somma dei contributi assoluti), oppure con segno long-option-OI, con età OI per osservazione visibile?
+   Proposta: greche fonte conservate, esposizione lorda senza compensazione call/put; variante con segno distinta, netto dealer non disponibile dall’OI; conversione USD esplicitamente validata prima di calcolo.
    Nessuna fonte consultata rivela il lato dealer; una misura dealer-signed richiederebbe ipotesi ulteriori approvate.
    Risposta: aperta. Impatto: contratto del pannello e controllo unità.
 
