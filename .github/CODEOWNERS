@@ -1,0 +1,3 @@
+# Richiesta automatica di review all'operatore su ogni PR che esce da draft (regola operatore 2026-11-13).
+# Owner valido: un utente con accesso in scrittura (verifica: gh api repos/<owner>/<repo>/codeowners/errors).
+* @gawaboga
