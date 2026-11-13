@@ -129,6 +129,9 @@ def test_repository_workflows_pass():
     assert checker.main() == 0
 
 
+PUBLIC_CI, PUBLIC_DOCKER = checker.PUBLIC_RUNNERS
+
+
 def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
     workflows = tmp_path / ".github/workflows"
     workflows.mkdir(parents=True)
@@ -146,21 +149,28 @@ def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
 @pytest.mark.parametrize(
     ("runner", "expected"),
     [
-        ("ubuntu-latest", 0),
-        # F-491: a public repository job on CI_RUNS_ON or a self-hosted selector stays queued forever.
+        (PUBLIC_CI, 0),
+        (PUBLIC_DOCKER, 0),
+        # Operator rule 2026-11-13: no public repository job depends on GitHub-hosted minutes.
+        ("ubuntu-latest", 1),
+        # Without the fork guard, fork pull request code would reach the self-hosted pool.
         ("${{ vars.CI_RUNS_ON }}", 1),
+        ("${{ vars.CI_RUNS_ON || 'sg-ci' }}", 1),
+        ("sg-priv", 1),
         (DOCKER_FORM, 1),
         ("[self-hosted, sg-ci]", 1),
         ("[ubuntu-latest]", 1),
     ],
 )
-def test_public_repository_requires_ubuntu_latest(tmp_path, monkeypatch, runner, expected):
+def test_public_repository_requires_fork_guarded_self_hosted(
+    tmp_path, monkeypatch, runner, expected
+):
     public_repo(tmp_path, monkeypatch, runner)
     assert checker.main() == expected
 
 
 def test_public_repository_rejects_docker_allowlist(tmp_path, monkeypatch, capsys):
-    public_repo(tmp_path, monkeypatch, "ubuntu-latest", docker_jobs=True)
+    public_repo(tmp_path, monkeypatch, PUBLIC_CI, docker_jobs=True)
     assert checker.main() == 1
     assert "not allowed in a public repository" in capsys.readouterr().out
 
@@ -189,23 +199,23 @@ def test_invalid_runner_policy_fails(tmp_path, text):
         ("    uses: ./.github/workflows/missing.yml\n", 1),
         ("    uses: gptcompany/.github/.github/workflows/_reusable-ai-review.yml@main\n", 1),
         ("    uses: ./other/reusable.yml\n", 1),
-        ("    uses: ./.github/workflows/reusable.yml\n    runs-on: ubuntu-latest\n", 1),
+        (f"    uses: ./.github/workflows/reusable.yml\n    runs-on: {PUBLIC_CI}\n", 1),
         ("    name: empty\n", 1),
-        ("    runs-on: ubuntu-latest\n    run-on: self-hosted\n", 1),
+        (f"    runs-on: {PUBLIC_CI}\n    run-on: self-hosted\n", 1),
     ],
 )
 def test_public_reusable_workflows_must_be_local(tmp_path, monkeypatch, job, expected):
-    public_repo(tmp_path, monkeypatch, "ubuntu-latest")
+    public_repo(tmp_path, monkeypatch, PUBLIC_CI)
     workflows = tmp_path / ".github/workflows"
     (workflows / "reusable.yml").write_text(
-        "on: workflow_call\njobs:\n  inner:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
+        f"on: workflow_call\njobs:\n  inner:\n    runs-on: {PUBLIC_CI}\n    steps:\n      - run: true\n"
     )
     (workflows / "caller.yml").write_text(f"jobs:\n  call:\n{job}")
     assert checker.main() == expected
 
 
 def test_public_local_reusable_workflow_is_analyzed(tmp_path, monkeypatch):
-    public_repo(tmp_path, monkeypatch, "ubuntu-latest")
+    public_repo(tmp_path, monkeypatch, PUBLIC_CI)
     workflows = tmp_path / ".github/workflows"
     (workflows / "reusable.yml").write_text(
         "on: workflow_call\njobs:\n  inner:\n    runs-on: [self-hosted]\n"

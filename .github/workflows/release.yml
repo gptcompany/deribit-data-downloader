@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: sg-priv
+    runs-on: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_review') && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'sg-priv' }}
     permissions:
       contents: write
       id-token: write
@@ -38,7 +38,7 @@ jobs:
           generate_release_notes: true
 
   docker-publish:
-    runs-on: sg-priv
+    runs-on: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_review') && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'sg-priv' }}
     needs: release
     permissions:
       packages: write
