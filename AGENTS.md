@@ -1,4 +1,4 @@
-<!-- gbg-agents:pillars BEGIN sha256=998976c2f21ac6f69ac5108c5585dd440773e49b564edc404db7ee6f5f7dfbf3 -->
+<!-- gbg-agents:pillars BEGIN sha256=f579c462a229c53881779f8ad6e633d910207064cf777c61892a9994bf03601e -->
 ## Pilastri nautilus_dev
 
 Fonte: `gbg-agents/instructions/PILLARS.md`; non modificare a mano.
@@ -15,4 +15,13 @@ Fonte: `gbg-agents/instructions/PILLARS.md`; non modificare a mano.
 - **KISS e YAGNI**: niente astrazioni o opzioni non richieste; funzioni di al più 50 righe.
 - **Native First**: NO custom indicators, nemmeno nuovi: solo `nautilus_trader.indicators` nativi (Rust); mai reimplementare EMA, RSI e simili.
 - **Performance**: operazioni vettoriali o wrangler Rust, mai `df.iterrows()`; algoritmi ricorsivi/online O(1) che si adattano di continuo.
+
+## Indice del sistema
+
+Solo puntatori, nessuna regola; repo `gptcompany/<nome>`, branch di default.
+
+- Topologia: `network-infra/ansible/inventory/hosts.yml`, `monitoring-stack/config/services.yaml` (servizi, owner, dipendenze); incompleta: se manca un dato, dillo.
+- Tecnologie: `gbg-agents/mise.toml` (versioni), `gbg-agents/docs/decisions/` (scelte), `gbg-agents/docs/research/reuse-catalog.md` (riuso, OSS).
+- Registri: `gbg-agents/docs/findings/rows/`, `gbg-agents/docs/credentials/register.json` (solo nomi), `monitoring-stack/docs/` (runbook).
+- Stato vivo: `gh pr list` e `gh run list --repo gptcompany/<nome>`, `orca status --json`; allarmi su tk-mon, se non rispondono chiedi al coordinatore.
 <!-- gbg-agents:pillars END -->
