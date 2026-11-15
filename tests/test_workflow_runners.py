@@ -158,7 +158,11 @@ def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
         ("${{ vars.CI_RUNS_ON }}", 1),
         ("${{ vars.CI_RUNS_ON || 'sg-ci' }}", 0),
         ("sg-priv", 0),
-        ("${{ github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'sg-priv' }}", 1),
+        (
+            "${{ github.event.pull_request.head.repo.full_name != github.repository"
+            " && 'ubuntu-latest' || 'sg-priv' }}",
+            1,
+        ),
         (DOCKER_FORM, 1),
         ("[self-hosted, sg-ci]", 1),
         ("[ubuntu-latest]", 1),
