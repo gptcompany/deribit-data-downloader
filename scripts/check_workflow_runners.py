@@ -16,7 +16,7 @@ GENERIC = "${{ vars.CI_RUNS_ON }}"
 # F-488: no self-hosted runner can run Docker for PR jobs (gbg-ci also matches sg-ci, which has none), so Docker
 # jobs declare a hosted fallback. The form is admitted only for the jobs in DOCKER_JOBS_FILE: recognizing Docker
 # from step text is a blocklist that any new spelling bypasses.
-DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["ubuntu-latest"]\') }}'
+DOCKER_EXPR = "${{ fromJSON(vars.CI_DOCKER_RUNS_ON || '[\"ubuntu-latest\"]') }}"
 DOCKER_JOBS_FILE = ROOT / ".github/docker-jobs.json"
 # Operator rule 2026-11-15: GitHub-hosted runners are never used, fork pull requests included (replaces F-491 and
 # the 2026-11-13 fork guard that fell back to ubuntu-latest). Fork code is gated by the repository approval policy
@@ -29,8 +29,25 @@ PUBLIC_RUNNERS = (
 )
 # Job-level keys from the GitHub Actions workflow syntax; anything else fails closed.
 JOB_KEYS = {
-    "name", "permissions", "needs", "if", "runs-on", "snapshot", "environment", "concurrency", "outputs", "env",
-    "defaults", "steps", "timeout-minutes", "strategy", "continue-on-error", "container", "services", "uses", "with",
+    "name",
+    "permissions",
+    "needs",
+    "if",
+    "runs-on",
+    "snapshot",
+    "environment",
+    "concurrency",
+    "outputs",
+    "env",
+    "defaults",
+    "steps",
+    "timeout-minutes",
+    "strategy",
+    "continue-on-error",
+    "container",
+    "services",
+    "uses",
+    "with",
     "secrets",
 }
 LOCAL_PREFIX = "./.github/workflows/"
@@ -79,7 +96,9 @@ def action_type(uses, origin=None):
         endpoint = f"{prefix}{path}?ref={quote(ref, safe='')}"
         result = subprocess.run(
             ["gh", "api", "-H", "Accept: application/vnd.github.raw+json", endpoint],
-            capture_output=True, text=True, check=False,
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if result.returncode == 0:
             break
@@ -118,7 +137,11 @@ def check_steps(steps, origin=None):
                     raise
                 kind = "docker"  # An unresolved local composite action may be generated.
             actions.append((uses, kind))
-            if kind == "docker" or kind.startswith("composite (Docker:") or uses.startswith("docker/"):
+            if (
+                kind == "docker"
+                or kind.startswith("composite (Docker:")
+                or uses.startswith("docker/")
+            ):
                 reasons.append(f"action: {uses} ({kind})")
         elif not isinstance(step["run"], str):
             raise ValueError("run must be a string")
@@ -160,11 +183,19 @@ def check_public_job(job, local_workflows):
         uses = job["uses"]
         if "runs-on" in job:
             raise ValueError("a reusable workflow call cannot have runs-on")
-        if not isinstance(uses, str) or not uses.startswith(LOCAL_PREFIX) or uses[len(LOCAL_PREFIX):] not in local_workflows:
-            raise ValueError(f"reusable workflow must be a local analyzed file {LOCAL_PREFIX}<file>, found {uses!r}")
+        if (
+            not isinstance(uses, str)
+            or not uses.startswith(LOCAL_PREFIX)
+            or uses[len(LOCAL_PREFIX) :] not in local_workflows
+        ):
+            raise ValueError(
+                f"reusable workflow must be a local analyzed file {LOCAL_PREFIX}<file>, found {uses!r}"
+            )
         return f"uses={uses}"
     if job.get("runs-on") not in PUBLIC_RUNNERS:
-        raise ValueError(f"public repository requires one of the self-hosted runners: {PUBLIC_RUNNERS}")
+        raise ValueError(
+            f"public repository requires one of the self-hosted runners: {PUBLIC_RUNNERS}"
+        )
     return f"runs-on={job['runs-on']}"
 
 
@@ -172,7 +203,9 @@ def check_public(paths):
     """Public repository: every job uses a self-hosted selector, and no Docker allowlist exists."""
     failed = DOCKER_JOBS_FILE.exists()
     if failed:
-        print(f"{DOCKER_JOBS_FILE.name} ERROR: the Docker runner form is not allowed in a public repository")
+        print(
+            f"{DOCKER_JOBS_FILE.name} ERROR: the Docker runner form is not allowed in a public repository"
+        )
     local_workflows = {path.name for path in paths}
     for path in paths:
         workflow = yaml.safe_load(path.read_text())
@@ -205,12 +238,16 @@ def main():
             seen.add((path.name, name))
             try:
                 reasons, actions = check_job(job, (path.name, name) in allowed)
-                print(f"{path.name}:{name} runs-on={job['runs-on']} docker={bool(reasons)} reasons={reasons} actions={actions}")
+                print(
+                    f"{path.name}:{name} runs-on={job['runs-on']} docker={bool(reasons)} reasons={reasons} actions={actions}"
+                )
             except (ValueError, yaml.YAMLError) as error:
                 print(f"{path.name}:{name} runs-on={job.get('runs-on')} ERROR: {error}")
                 failed = True
     for workflow_name, job_name in sorted(allowed - seen):
-        print(f"{DOCKER_JOBS_FILE.name}: {workflow_name}:{job_name} ERROR: listed job does not exist")
+        print(
+            f"{DOCKER_JOBS_FILE.name}: {workflow_name}:{job_name} ERROR: listed job does not exist"
+        )
         failed = True
     return int(failed)
 

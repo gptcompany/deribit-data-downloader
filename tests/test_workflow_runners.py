@@ -168,9 +168,7 @@ def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
         ("[ubuntu-latest]", 1),
     ],
 )
-def test_public_repository_requires_self_hosted_selectors(
-    tmp_path, monkeypatch, runner, expected
-):
+def test_public_repository_requires_self_hosted_selectors(tmp_path, monkeypatch, runner, expected):
     public_repo(tmp_path, monkeypatch, runner)
     assert checker.main() == expected
 
