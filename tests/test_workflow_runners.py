@@ -153,16 +153,18 @@ def public_repo(tmp_path, monkeypatch, runner, docker_jobs=False):
         (PUBLIC_DOCKER, 0),
         # Operator rule 2026-11-13: no public repository job depends on GitHub-hosted minutes.
         ("ubuntu-latest", 1),
-        # Without the fork guard, fork pull request code would reach the self-hosted pool.
+        # Operator rule 2026-11-15: not even fork pull requests run on a hosted runner; the
+        # repository approval policy (all_external_contributors) gates fork code instead.
         ("${{ vars.CI_RUNS_ON }}", 1),
-        ("${{ vars.CI_RUNS_ON || 'sg-ci' }}", 1),
-        ("sg-priv", 1),
+        ("${{ vars.CI_RUNS_ON || 'sg-ci' }}", 0),
+        ("sg-priv", 0),
+        ("${{ github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'sg-priv' }}", 1),
         (DOCKER_FORM, 1),
         ("[self-hosted, sg-ci]", 1),
         ("[ubuntu-latest]", 1),
     ],
 )
-def test_public_repository_requires_fork_guarded_self_hosted(
+def test_public_repository_requires_self_hosted_selectors(
     tmp_path, monkeypatch, runner, expected
 ):
     public_repo(tmp_path, monkeypatch, runner)
