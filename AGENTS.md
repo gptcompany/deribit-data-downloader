@@ -1,5 +1,7 @@
-<!-- gbg-agents:pillars BEGIN sha256=f579c462a229c53881779f8ad6e633d910207064cf777c61892a9994bf03601e -->
+<!-- gbg-agents:pillars BEGIN sha256=96fe1160c5ebe325b38dcf49c837719dabd8b43f20ac0f2ed4ecc8f8fdb47d3f -->
 ## Pilastri nautilus_dev
+
+**RIUSO MASSIMO. NESSUNA RIGA DI CODICE NUOVA SE NON ASSOLUTAMENTE NECESSARIA. Prima si cerca, dimostrandolo: nella repo, negli strumenti installati, negli OSS mantenuti e nel catalogo di riuso (`docs/research/reuse-catalog.md` con `reuse/*`). Si scrive solo ciò che la ricerca lascia scoperto, e si dice perché.**
 
 Fonte: `gbg-agents/instructions/PILLARS.md`; non modificare a mano.
 
