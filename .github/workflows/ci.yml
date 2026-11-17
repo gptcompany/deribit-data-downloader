@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'sg-ci' }}
     permissions:
       contents: read
       id-token: write
@@ -82,7 +82,7 @@ jobs:
         continue-on-error: true
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: sg-priv
     needs: test
 
     steps:

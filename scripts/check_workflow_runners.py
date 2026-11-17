@@ -18,11 +18,15 @@ GENERIC = "${{ vars.CI_RUNS_ON }}"
 # from step text is a blocklist that any new spelling bypasses.
 DOCKER_EXPR = '${{ fromJSON(vars.CI_DOCKER_RUNS_ON || \'["ubuntu-latest"]\') }}'
 DOCKER_JOBS_FILE = ROOT / ".github/docker-jobs.json"
-# F-491: the org runner group holding sg-ci and dell-ci excludes public repositories, so a public repository job on a
-# self-hosted selector or on CI_RUNS_ON stays queued forever without an error; public repositories get free hosted
-# minutes instead. The visibility is declared in a versioned file, not read at runtime.
+# Operator rule 2026-11-15: GitHub-hosted runners are never used, fork pull requests included (replaces F-491 and
+# the 2026-11-13 fork guard that fell back to ubuntu-latest). Fork code is gated by the repository approval policy
+# (all_external_contributors), not by a hosted runner. The visibility is declared in a versioned file, not read at
+# runtime.
 POLICY_NAME = ".github/runner-policy.json"
-PUBLIC_RUNNER = "ubuntu-latest"
+PUBLIC_RUNNERS = (
+    "${{ vars.CI_RUNS_ON || 'sg-ci' }}",
+    "sg-priv",
+)
 # Job-level keys from the GitHub Actions workflow syntax; anything else fails closed.
 JOB_KEYS = {
     "name", "permissions", "needs", "if", "runs-on", "snapshot", "environment", "concurrency", "outputs", "env",
@@ -159,13 +163,13 @@ def check_public_job(job, local_workflows):
         if not isinstance(uses, str) or not uses.startswith(LOCAL_PREFIX) or uses[len(LOCAL_PREFIX):] not in local_workflows:
             raise ValueError(f"reusable workflow must be a local analyzed file {LOCAL_PREFIX}<file>, found {uses!r}")
         return f"uses={uses}"
-    if job.get("runs-on") != PUBLIC_RUNNER:
-        raise ValueError(f"public repository requires runs-on: {PUBLIC_RUNNER}")
-    return f"runs-on={PUBLIC_RUNNER}"
+    if job.get("runs-on") not in PUBLIC_RUNNERS:
+        raise ValueError(f"public repository requires one of the self-hosted runners: {PUBLIC_RUNNERS}")
+    return f"runs-on={job['runs-on']}"
 
 
 def check_public(paths):
-    """Public repository: every job runs on the literal hosted runner, and no Docker allowlist exists."""
+    """Public repository: every job uses a self-hosted selector, and no Docker allowlist exists."""
     failed = DOCKER_JOBS_FILE.exists()
     if failed:
         print(f"{DOCKER_JOBS_FILE.name} ERROR: the Docker runner form is not allowed in a public repository")

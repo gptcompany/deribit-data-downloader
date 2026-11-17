@@ -1,0 +1,4 @@
+# Self-hosted runner labels of the gptcompany pool, same file shape as gbg-agents.
+self-hosted-runner:
+  labels:
+    - sg-priv
